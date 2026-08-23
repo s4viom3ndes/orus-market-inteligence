@@ -126,8 +126,18 @@ Deploy Streamlit Cloud:
 ## Buy Box mock
 
 Configuracao em `etl/config/mock_client.yaml` (4 SKUs fake atrelados a catalog_product_ids reais).
-`services/buy_box_monitor.py` avalia posicao, gap, recomenda acao.
-`jobs/monitor_buy_box.py` compara com estado anterior em R2 e dispara email.
+`services/buy_box_monitor.py` avalia posicao, gap, recomenda acao. Fallback pra live fetch se SKU nao ta no snapshot.
+`jobs/monitor_buy_box.py` compara com estado anterior em R2 e dispara email. Tambem sincroniza YAML pro R2 (`state/mock_client.yaml`) pro dashboard ler.
+
+## Repricer (v1)
+
+`services/repricer.py` implementa `suggest(sku_cfg, offers, has_full, defaults)` + `simulate(price, offers)` + `simulate_curve(...)`.
+
+Estrategias suportadas: `beat_winner` (default), `match_winner`, `hold`, `defensive`, `full_premium`.
+
+Guard rails: `min_price` (nunca desce), `max_price` (cap), `max_change_pct_per_run` (default 15%). Retorna status: `hold`, `suggest_change`, `locked`, `no_data`.
+
+`jobs/run_repricer.py` roda apos monitor_buy_box (cron 03:45 UTC) e escreve `reprice_suggestions/date=YYYY-MM-DD/*.parquet` no R2. `dashboard/pages/3_Repricer.py` mostra sugestoes + simulador com slider interativo.
 
 Secrets necessarios no GitHub (Settings > Secrets and variables > Actions):
 - `ML_APP_ID`, `ML_CLIENT_SECRET`, `ML_REDIRECT_URI`, `ML_WEBHOOK_SECRET`

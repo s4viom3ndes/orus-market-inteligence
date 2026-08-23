@@ -17,7 +17,9 @@ Data: 2026-08-23.
 ## 🚀 Médio prazo (transforma em produto vendável)
 
 ### Features de produto
-- [ ] **Motor de repricer**: dado o snapshot mais recente, sugere novo preço por SKU respeitando margem mín, gap pro winner, tipo de shipping. Pode simular impacto ("se ajustar pra R$ X, ganha buy box em Y%").
+- [x] **Motor de repricer v1**: regras determinísticas (beat_winner/match/hold/defensive/full_premium) + guard rails (min_price, max_price, delta_max_por_run). Simulador interativo com slider no dashboard. Suggest_only. Cron 03:45 UTC.
+- [ ] **Motor de repricer v2**: modo `approval` (cliente clica pra aplicar) — requer OAuth real do cliente.
+- [ ] **Motor de repricer v3**: `auto_apply` — chama PUT /items/{id} sem intervenção.
 - [ ] **Histórico de preços por SKU**: dashboard mostra série temporal (últimos 30/90 dias) — variação do winner, entrada/saída de vendedores.
 - [ ] **Detecção de anomalias**: comparação snapshot vs anterior. Ex: "novo concorrente entrou na cat X com preço 30% abaixo", "winner mudou 3 vezes na semana".
 - [ ] **Alertas configuráveis**: por cliente, escolher regras (perda de buy box, queda de preço da categoria, novo concorrente estratégico).
