@@ -10,3 +10,4 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+_streamlit_secrets_TEMP.toml

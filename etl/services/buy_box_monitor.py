@@ -5,6 +5,8 @@ from pathlib import Path
 import yaml
 import polars as pl
 from src.config import ETL_ROOT, R2_BUCKET, USE_REMOTE_STORAGE
+from services.ml_client import MLClient
+from services.search import get_product, iter_product_items, normalize_offer
 
 log = logging.getLogger(__name__)
 
@@ -58,10 +60,29 @@ def _save_state(state: dict) -> None:
         upload_bytes(payload, STATE_KEY, content_type="application/json")
 
 
-def evaluate_sku(sku_cfg: dict, snapshot: pl.DataFrame) -> dict:
-    """Avalia status de 1 SKU mockado contra o snapshot."""
+def _fetch_offers_live(pid: str, category_id: str, client: MLClient) -> pl.DataFrame:
+    """Busca ofertas do catalog product direto do ML (fallback quando nao esta no snapshot)."""
+    try:
+        product = get_product(pid, client)
+        raw_offers = list(iter_product_items(pid, client))
+        if not raw_offers:
+            return pl.DataFrame()
+        captured_at = int(time.time())
+        rows = [normalize_offer(product, o, captured_at, category_id=category_id) for o in raw_offers]
+        return pl.from_dicts(rows, infer_schema_length=None)
+    except Exception as e:
+        log.warning("fallback live fetch falhou para %s: %s", pid, e)
+        return pl.DataFrame()
+
+
+def evaluate_sku(sku_cfg: dict, snapshot: pl.DataFrame, client: MLClient | None = None) -> dict:
+    """Avalia status de 1 SKU mockado contra o snapshot; fallback pra live se ausente."""
     pid = sku_cfg["catalog_product_id"]
     offers = snapshot.filter(pl.col("catalog_product_id") == pid).sort("rank")
+
+    if offers.is_empty() and client is not None:
+        log.info("SKU %s (%s) nao no snapshot, buscando live...", sku_cfg["sku"], pid)
+        offers = _fetch_offers_live(pid, sku_cfg["category_id"], client).sort("rank")
 
     result = {
         "sku": sku_cfg["sku"],
@@ -119,7 +140,11 @@ def run() -> dict:
     snap = load_latest_snapshot()
     log.info("snapshot com %s linhas, avaliando %s SKUs", snap.height, len(cfg["skus"]))
 
-    results = [evaluate_sku(s, snap) for s in cfg["skus"]]
+    client = MLClient()
+    try:
+        results = [evaluate_sku(s, snap, client) for s in cfg["skus"]]
+    finally:
+        client.close()
     prev = _load_state()
     changes = []
 
