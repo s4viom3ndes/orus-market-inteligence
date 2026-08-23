@@ -3,14 +3,28 @@ from pathlib import Path
 import streamlit as st
 import polars as pl
 import yaml
-from lib.r2_reader import load_latest_market_snapshot, load_buy_box_state
+from lib.r2_reader import load_latest_market_snapshot, load_buy_box_state, get_client, R2_BUCKET
 
 st.set_page_config(page_title="Buy Box Monitor", page_icon="🏆", layout="wide")
 st.title("🏆 Buy Box Monitor - VariedadesSB (mock)")
 st.caption("Comparacao dos SKUs do cliente contra os winners atuais do mercado.")
 
-MOCK_CFG = Path(__file__).parent.parent.parent / "etl" / "config" / "mock_client.yaml"
-cfg = yaml.safe_load(MOCK_CFG.read_text(encoding="utf-8"))
+
+@st.cache_data(ttl=300)
+def load_mock_config() -> dict:
+    """Le mock_client.yaml do R2 (sincronizado pelo monitor_buy_box).
+    Fallback pra caminho local (dev)."""
+    try:
+        obj = get_client().get_object(Bucket=R2_BUCKET, Key="state/mock_client.yaml")
+        return yaml.safe_load(obj["Body"].read())
+    except Exception:
+        local = Path(__file__).parent.parent.parent / "etl" / "config" / "mock_client.yaml"
+        if local.exists():
+            return yaml.safe_load(local.read_text(encoding="utf-8"))
+        raise RuntimeError("mock_client.yaml nao encontrado nem no R2 nem local. Rode monitor_buy_box uma vez.")
+
+
+cfg = load_mock_config()
 
 seller = cfg["seller"]
 skus = cfg["skus"]

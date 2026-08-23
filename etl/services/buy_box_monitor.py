@@ -11,12 +11,21 @@ from services.search import get_product, iter_product_items, normalize_offer
 log = logging.getLogger(__name__)
 
 MOCK_CONFIG = ETL_ROOT / "config" / "mock_client.yaml"
+MOCK_CONFIG_KEY = "state/mock_client.yaml"
 STATE_KEY = "state/buy_box_state.json"
 LOCAL_STATE = ETL_ROOT / "state_buy_box.json"
 
 
 def load_mock_client() -> dict:
-    return yaml.safe_load(MOCK_CONFIG.read_text(encoding="utf-8"))
+    """Le YAML local e sincroniza copia no R2 (pra dashboard cliente acessar)."""
+    raw = MOCK_CONFIG.read_text(encoding="utf-8")
+    if USE_REMOTE_STORAGE:
+        try:
+            from storage.r2 import upload_bytes
+            upload_bytes(raw.encode("utf-8"), MOCK_CONFIG_KEY, content_type="text/yaml")
+        except Exception as e:
+            log.warning("sync mock_client.yaml pro R2 falhou: %s", e)
+    return yaml.safe_load(raw)
 
 
 def load_latest_snapshot() -> pl.DataFrame:
