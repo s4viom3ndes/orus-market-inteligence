@@ -33,19 +33,34 @@ h1, h2, h3, h4, h5 {{
   border-right: 2px solid {DIVIDER} !important;
 }}
 [data-testid="stSidebar"] * {{ font-family: 'Archivo', sans-serif !important; color: {TEXT}; }}
-[data-testid="stSidebarNav"] a {{
+[data-testid="stSidebarNav"] a,
+[data-testid="stPageLink-NavLink"],
+[data-testid="stSidebar"] a[data-testid*="stPageLink"] {{
   font-weight: 400 !important;
   color: {TEXT} !important;
   border-left: 3px solid transparent !important;
   padding: 8px 12px !important;
+  text-decoration: none !important;
+  display: block !important;
 }}
-[data-testid="stSidebarNav"] a[aria-current="page"] {{
+[data-testid="stSidebarNav"] a[aria-current="page"],
+[data-testid="stPageLink-NavLink"][aria-current="page"],
+[data-testid="stSidebar"] a[data-testid*="stPageLink"][aria-current="page"] {{
   color: {ACCENT} !important;
   font-weight: 800 !important;
   border-left: 3px solid {ACCENT} !important;
   background: {SURFACE} !important;
 }}
-[data-testid="stSidebarNav"] a:hover {{ background: {SURFACE} !important; }}
+[data-testid="stSidebarNav"] a:hover,
+[data-testid="stPageLink-NavLink"]:hover,
+[data-testid="stSidebar"] a[data-testid*="stPageLink"]:hover {{
+  background: {SURFACE} !important;
+}}
+[data-testid="stSidebar"] [data-testid="stPageLink"] p {{
+  font-weight: inherit !important;
+  color: inherit !important;
+  margin: 0 !important;
+}}
 
 [data-testid="stMetricValue"] {{
   font-family: 'Archivo', sans-serif !important;
@@ -117,10 +132,24 @@ BRAND_MARK_HTML = f"""
 """
 
 
+NAV_PAGES = [
+    ("app.py", "Visão Geral"),
+    ("pages/1_Mercado.py", "Mercado"),
+    ("pages/2_Buy_Box.py", "Buy Box"),
+    ("pages/3_Repricer.py", "Repricer"),
+    ("pages/4_Trends.py", "Trends"),
+]
+
+
 def sidebar_header():
     st.sidebar.markdown(BRAND_MARK_HTML, unsafe_allow_html=True)
     st.sidebar.markdown(f'<hr style="border-top:2px solid {DIVIDER};margin:0 0 12px">',
                         unsafe_allow_html=True)
+
+
+def sidebar_nav():
+    for path, label in NAV_PAGES:
+        st.sidebar.page_link(path, label=label)
 
 
 def sidebar_footer(seller_name: str, seller_id: int | str):
@@ -137,4 +166,5 @@ def setup(page_title: str, seller_name: str = "VariedadesSB (mock)", seller_id: 
     st.set_page_config(page_title=f"Orus - {page_title}", page_icon="◾", layout="wide")
     inject_css()
     sidebar_header()
+    sidebar_nav()
     sidebar_footer(seller_name, seller_id)

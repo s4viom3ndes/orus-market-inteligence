@@ -5,5 +5,8 @@ secondaryBackgroundColor = "#eae9e9"
 textColor = "#201e1d"
 font = "sans serif"
 
+[client]
+showSidebarNavigation = false
+
 [server]
 runOnSave = true
