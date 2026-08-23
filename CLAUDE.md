@@ -33,8 +33,13 @@ storage/
 services/
   token_store.py    # load/save tokens.json (local + R2 quando habilitado)
 jobs/
-  collect_market.py # CLI: python -m jobs.collect_market [--categories MLB1055 ...]
-  scheduler.py      # long-running: python -m jobs.scheduler --every-minutes 60 --run-now
+  collect_market.py    # coleta ofertas por categoria + enrichment consumidor
+  collect_trends.py    # dataset paralelo: trending searches
+  discover_categories.py  # walker da arvore, popula state/leaves.json no R2
+  scheduler.py         # loop local (dev): python -m jobs.scheduler --every-minutes 60
+services/
+  categories.py     # walker de arvore com max_depth
+  enrichment.py     # visits/reviews/questions por item
 models/
   user.py           # User do sistema Orus
   account.py        # MLAccount + MLTokens
@@ -97,7 +102,12 @@ Se `.env` tem `R2_ENDPOINT` + `R2_ACCESS_KEY_ID` + `R2_SECRET_ACCESS_KEY`, o sis
 
 ## GitHub Actions
 
-`.github/workflows/collect_market.yml` roda `python -m jobs.collect_market` a cada hora (cron `0 * * * *`).
+Tres workflows agendados:
+- `collect_market.yml` — cron `0 */12 * * *` (a cada 12h). Coleta ofertas + enrichment. `--max-per-cat 10`. ~40 min por run.
+- `collect_trends.yml` — cron `15 3 * * *` (diario 03:15 UTC = 00:15 BRT). Trending searches. ~2 min.
+- `discover_categories.yml` — cron `30 3 * * 1` (segunda 03:30 UTC). Atualiza `state/leaves.json` no R2. `--max-depth 2`.
+
+Custo estimado: ~2400 min/mes (free tier 2000 min, extras ~$3/mes). Pra dobrar cadencia (6h), estouraria ~$22/mes.
 
 Secrets necessarios no GitHub (Settings > Secrets and variables > Actions):
 - `ML_APP_ID`, `ML_CLIENT_SECRET`, `ML_REDIRECT_URI`, `ML_WEBHOOK_SECRET`

@@ -1,9 +1,12 @@
 import logging
 import time
-from datetime import date
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 import polars as pl
 from src.config import USE_REMOTE_STORAGE
+
+TZ_SP = ZoneInfo("America/Sao_Paulo")
 
 log = logging.getLogger(__name__)
 
@@ -15,7 +18,7 @@ def write_snapshot(rows: list[dict], dataset: str, base_dir: Path) -> str:
         raise ValueError("nada pra escrever")
 
     df = pl.from_dicts(rows, infer_schema_length=None)
-    today = date.today().isoformat()
+    today = datetime.now(TZ_SP).date().isoformat()
     ts = int(time.time())
     filename = f"snapshot-{ts}.parquet"
 

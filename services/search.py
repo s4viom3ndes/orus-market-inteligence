@@ -51,6 +51,10 @@ def normalize_offer(
     captured_at: int,
     watchlist_sellers: set[int] | None = None,
     category_id: str | None = None,
+    visits_30d: int | None = None,
+    reviews_count: int | None = None,
+    reviews_avg: float | None = None,
+    questions_count: int | None = None,
 ) -> dict:
     shipping = offer.get("shipping") or {}
     addr = offer.get("seller_address") or {}
@@ -89,6 +93,11 @@ def normalize_offer(
 
         "state": (addr.get("state") or {}).get("name"),
         "city": (addr.get("city") or {}).get("name"),
+
+        "visits_30d": visits_30d,
+        "reviews_count": reviews_count,
+        "reviews_avg_rating": reviews_avg,
+        "questions_count": questions_count,
     }
 
 
