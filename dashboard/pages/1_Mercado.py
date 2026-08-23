@@ -1,9 +1,10 @@
 import streamlit as st
 import polars as pl
+from lib.theme import setup
 from lib.r2_reader import load_latest_market_snapshot
 
-st.set_page_config(page_title="Mercado por categoria", page_icon="📈", layout="wide")
-st.title("📈 Mercado por Categoria")
+setup("Mercado")
+st.markdown("<h1 style='font-size:34px;margin-bottom:20px'>Mercado por Categoria</h1>", unsafe_allow_html=True)
 
 df = load_latest_market_snapshot()
 if df.is_empty():
@@ -11,16 +12,20 @@ if df.is_empty():
     st.stop()
 
 cats = sorted(df["category_id"].unique().to_list())
-cat_id = st.selectbox("Categoria", cats)
+cat_id = st.selectbox("Categoria", cats, label_visibility="collapsed")
 
 sub = df.filter(pl.col("category_id") == cat_id)
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Ofertas", sub.height)
-col2.metric("Produtos distintos", sub["catalog_product_id"].n_unique())
-col3.metric("Vendedores", sub["seller_id"].n_unique())
+st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
-st.subheader("Produtos mais competidos nessa categoria")
+c1, c2, c3 = st.columns(3)
+c1.metric("Ofertas", f"{sub.height:,}".replace(",", "."))
+c2.metric("Produtos distintos", f"{sub['catalog_product_id'].n_unique():,}".replace(",", "."))
+c3.metric("Vendedores", f"{sub['seller_id'].n_unique():,}".replace(",", "."))
+
+st.markdown("<hr>", unsafe_allow_html=True)
+st.markdown("<h3 style='margin:0 0 14px'>Produtos mais competidos nessa categoria</h3>", unsafe_allow_html=True)
+
 top = (sub.group_by(["catalog_product_id", "product_name"])
        .agg(
            pl.len().alias("n_sellers"),
@@ -31,12 +36,12 @@ top = (sub.group_by(["catalog_product_id", "product_name"])
        ).sort("n_sellers", descending=True).head(20))
 st.dataframe(top, use_container_width=True, hide_index=True)
 
-st.subheader("Ofertas nessa categoria")
+st.markdown("<h3 style='margin:24px 0 14px'>Ofertas nessa categoria</h3>", unsafe_allow_html=True)
 st.dataframe(
     sub.select([
-        "catalog_product_id", "product_name", "seller_id", "price",
-        "shipping_logistic_type", "shipping_free", "condition", "rank",
-        "is_buy_box_winner", "visits_30d", "reviews_count", "reviews_avg_rating"
+        "product_name", "seller_id", "price", "shipping_logistic_type",
+        "shipping_free", "condition", "rank", "is_buy_box_winner",
+        "visits_30d", "reviews_count", "reviews_avg_rating",
     ]).sort(["catalog_product_id", "rank"]),
-    use_container_width=True, hide_index=True
+    use_container_width=True, hide_index=True,
 )
