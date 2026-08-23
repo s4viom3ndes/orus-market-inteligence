@@ -27,6 +27,12 @@ def write_snapshot(rows: list[dict], dataset: str, base_dir: Path) -> str:
     local_path = tmp_dir / filename
     df.write_parquet(local_path, compression="zstd")
 
+    try:
+        from services.data_health import compute_and_save
+        compute_and_save(df, dataset)
+    except Exception as e:
+        log.warning("data_health falhou (nao bloqueia write): %s", e)
+
     if USE_REMOTE_STORAGE:
         from storage.r2 import upload_file
         key = f"{dataset}/date={today}/{filename}"
