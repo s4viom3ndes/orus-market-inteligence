@@ -6,7 +6,7 @@ from pathlib import Path
 from src.config import PROJECT_ROOT, WATCHLIST_SELLERS, WATCHLIST_CATEGORIES, USE_REMOTE_STORAGE
 from services.ml_client import MLClient
 from services.search import iter_highlights, get_product, iter_product_items, normalize_offer
-from services.enrichment import get_visits_batch, get_reviews_summary, get_questions_count
+from services.enrichment import get_visits_for, get_reviews_summary, get_questions_count
 from storage.parquet_writer import write_snapshot
 
 logging.basicConfig(
@@ -79,8 +79,9 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
 
             visits_map = {}
             if enrich and cat_offers:
-                item_ids = list({o["item_id"] for _, o in cat_offers if o.get("item_id")})
-                visits_map = get_visits_batch(item_ids, client)
+                winner_item_ids = [o["item_id"] for _, o in cat_offers
+                                   if o.get("_rank") == 0 and o.get("item_id")]
+                visits_map = get_visits_for(winner_item_ids, client)
 
             reviews_cache: dict[str, dict] = {}
             questions_cache: dict[str, int | None] = {}

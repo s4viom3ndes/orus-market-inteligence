@@ -4,31 +4,33 @@ from services.ml_client import MLClient
 
 log = logging.getLogger(__name__)
 
-THROTTLE_SEC = 0.1
-BATCH_SIZE = 20
+THROTTLE_SEC = 0.05
 
 
-def get_visits_batch(item_ids: list[str], client: MLClient) -> dict[str, int]:
-    """Retorna dict {item_id: total_visits} para uma lista de item_ids (batch)."""
-    if not item_ids:
-        return {}
+def get_visits(item_id: str, client: MLClient) -> int | None:
+    """ML /visits/items aceita apenas 1 id por chamada (mudanca recente)."""
+    try:
+        data = client.get("/visits/items", ids=item_id)
+        if isinstance(data, dict):
+            v = data.get(item_id)
+            if isinstance(v, int):
+                return v
+    except Exception as e:
+        log.debug("visits falhou %s: %s", item_id, e)
+    return None
+
+
+def get_visits_for(item_ids: list[str], client: MLClient) -> dict[str, int]:
     results: dict[str, int] = {}
-    for i in range(0, len(item_ids), BATCH_SIZE):
-        chunk = item_ids[i:i + BATCH_SIZE]
-        try:
-            data = client.get("/visits/items", ids=",".join(chunk))
-            if isinstance(data, dict):
-                for k, v in data.items():
-                    if isinstance(v, int):
-                        results[k] = v
-        except Exception as e:
-            log.warning("get_visits_batch falhou pra chunk %s: %s", chunk[:3], e)
+    for iid in item_ids:
+        v = get_visits(iid, client)
+        if v is not None:
+            results[iid] = v
         time.sleep(THROTTLE_SEC)
     return results
 
 
 def get_reviews_summary(item_id: str, client: MLClient) -> dict:
-    """Retorna {count, avg_rating} para um item."""
     try:
         data = client.get(f"/reviews/item/{item_id}", limit=1)
         total = (data.get("paging") or {}).get("total", 0)
