@@ -7,6 +7,7 @@ from src.config import PROJECT_ROOT, WATCHLIST_SELLERS, WATCHLIST_CATEGORIES, US
 from services.ml_client import MLClient
 from services.search import iter_highlights, get_product, iter_product_items, normalize_offer
 from services.enrichment import get_visits_for, get_reviews_summary, get_questions_count
+from services.job_status import track
 from storage.parquet_writer import write_snapshot
 
 logging.basicConfig(
@@ -21,33 +22,41 @@ LEAVES_KEY = "state/leaves.json"
 
 
 def load_leaf_categories() -> list[str]:
-    """Carrega lista de folhas. Tenta R2, depois local, depois fallback."""
+    """Merge WATCHLIST_CATEGORIES (prioridade) + folhas descobertas do R2/local.
+
+    Isso garante que as categorias especificas do cliente sao SEMPRE coletadas,
+    mesmo que o walker com max_depth limitado nao chegue nelas.
+    """
+    cats: list[str] = list(WATCHLIST_CATEGORIES)
+
     if USE_REMOTE_STORAGE:
         from storage.r2 import download_bytes
         raw = download_bytes(LEAVES_KEY)
         if raw:
             data = json.loads(raw)
-            leaves = [l["id"] for l in data.get("leaves", [])]
-            log.info("carreguei %s folhas do R2", len(leaves))
-            return leaves
-
-    if LEAVES_LOCAL.exists():
+            cats.extend(l["id"] for l in data.get("leaves", []))
+            log.info("carreguei %s folhas do R2", len(data.get("leaves", [])))
+    elif LEAVES_LOCAL.exists():
         data = json.loads(LEAVES_LOCAL.read_text(encoding="utf-8"))
-        leaves = [l["id"] for l in data.get("leaves", [])]
-        log.info("carreguei %s folhas do arquivo local", len(leaves))
-        return leaves
+        cats.extend(l["id"] for l in data.get("leaves", []))
+        log.info("carreguei %s folhas do arquivo local", len(data.get("leaves", [])))
+    else:
+        log.warning("nenhum arquivo de folhas encontrado, so usando WATCHLIST_CATEGORIES")
 
-    log.warning("nenhum arquivo de folhas encontrado, usando WATCHLIST_CATEGORIES do config")
-    return WATCHLIST_CATEGORIES
+    deduped = list(dict.fromkeys(cats))
+    log.info("total categorias efetivas: %s (%s da watchlist + %s outras)",
+             len(deduped), len(WATCHLIST_CATEGORIES), len(deduped) - len(WATCHLIST_CATEGORIES))
+    return deduped
 
 
-def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: int | None = None) -> None:
+def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: int | None = None) -> dict:
     watch = set(WATCHLIST_SELLERS)
     log.info("coleta: %s categorias | watchlist=%s | enrich=%s", len(categories), watch, enrich)
     captured_at = int(time.time())
 
     rows = []
     watched_hits = 0
+    cats_ok = 0
     client = MLClient()
 
     try:
@@ -65,6 +74,7 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
                 continue
 
             log.info("[%s/%s] cat=%s -> %s produtos", ci, len(categories), cat_id, len(product_ids))
+            cats_ok += 1
 
             cat_offers: list[tuple[dict, dict]] = []
             for pid in product_ids:
@@ -115,9 +125,20 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
 
     log.info("coleta concluida: %s linhas | %s da watchlist", len(rows), watched_hits)
 
+    counts = {
+        "categories_ok": cats_ok,
+        "rows": len(rows),
+        "watched_hits": watched_hits,
+        "unique_products": len({r["catalog_product_id"] for r in rows}),
+        "unique_sellers": len({r["seller_id"] for r in rows}),
+    }
+
     if rows:
         out = write_snapshot(rows, dataset=dataset, base_dir=DATA_DIR)
         log.info("arquivo: %s", out)
+        counts["output"] = out
+
+    return counts
 
 
 def main():
@@ -129,7 +150,9 @@ def main():
     args = p.parse_args()
 
     cats = args.categories or load_leaf_categories()
-    run(categories=cats, dataset=args.dataset, enrich=not args.no_enrich, max_per_cat=args.max_per_cat)
+    with track("collect_market") as job:
+        job["counts"] = run(categories=cats, dataset=args.dataset,
+                            enrich=not args.no_enrich, max_per_cat=args.max_per_cat)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 import logging
 from services.buy_box_monitor import run as run_monitor
 from services import email_notifier
+from services.job_status import track
 
 logging.basicConfig(
     level=logging.INFO,
@@ -48,22 +49,32 @@ def format_email(report: dict) -> tuple[str, str]:
 
 
 def main():
-    report = run_monitor()
-    log.info("relatorio: %s mudancas, %s SKUs avaliados",
-             len(report["changes"]), len(report["results"]))
+    with track("monitor_buy_box") as job:
+        report = run_monitor()
+        log.info("relatorio: %s mudancas, %s SKUs avaliados",
+                 len(report["changes"]), len(report["results"]))
 
-    for r in report["results"]:
-        log.info("  [%s] status=%s | meu=R$%.2f winner=R$%s | %s",
-                 r["sku"], r["status"], r["current_price"],
-                 f"{r['winner_price']:.2f}" if r["winner_price"] else "?",
-                 r["recommendation"])
+        for r in report["results"]:
+            log.info("  [%s] status=%s | meu=R$%.2f winner=R$%s | %s",
+                     r["sku"], r["status"], r["current_price"],
+                     f"{r['winner_price']:.2f}" if r["winner_price"] else "?",
+                     r["recommendation"])
 
-    if report["changes"] and email_notifier.is_configured():
-        seller = report["seller"]
-        subject, html, text = format_email(report)
-        email_notifier.send(seller["contact_email"], subject, html, text)
-    elif not report["changes"]:
-        log.info("nenhuma mudanca, email nao enviado")
+        email_sent = False
+        if report["changes"] and email_notifier.is_configured():
+            seller = report["seller"]
+            subject, html, text = format_email(report)
+            email_notifier.send(seller["contact_email"], subject, html, text)
+            email_sent = True
+        elif not report["changes"]:
+            log.info("nenhuma mudanca, email nao enviado")
+
+        job["counts"] = {
+            "skus_avaliados": len(report["results"]),
+            "changes": len(report["changes"]),
+            "email_sent": email_sent,
+            "statuses": {r["sku"]: r["status"] for r in report["results"]},
+        }
 
 
 if __name__ == "__main__":

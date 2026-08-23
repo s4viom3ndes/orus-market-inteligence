@@ -1,0 +1,22 @@
+{
+  "job": "monitor_buy_box",
+  "started_at": 1787500552,
+  "started_at_iso": "2026-08-23T15:55:52Z",
+  "status": "success",
+  "counts": {
+    "skus_avaliados": 4,
+    "changes": 4,
+    "email_sent": false,
+    "statuses": {
+      "SR-INOX-001": "no_data",
+      "RALD-INOX-4F": "no_data",
+      "CAB-MDR-20": "no_data",
+      "LUM-PIXAR": "no_data"
+    }
+  },
+  "error": null,
+  "notes": null,
+  "finished_at": 1787500554,
+  "finished_at_iso": "2026-08-23T15:55:54Z",
+  "duration_sec": 2
+}

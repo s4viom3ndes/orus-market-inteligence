@@ -3,6 +3,7 @@ import logging
 import time
 from src.config import PROJECT_ROOT
 from services.ml_client import MLClient
+from services.job_status import track
 from storage.parquet_writer import write_snapshot
 
 logging.basicConfig(
@@ -14,7 +15,7 @@ log = logging.getLogger("collect_trends")
 DATA_DIR = PROJECT_ROOT / "data"
 
 
-def run(site: str, categories: list[str], dataset: str) -> None:
+def run(site: str, categories: list[str], dataset: str) -> dict:
     captured_at = int(time.time())
     client = MLClient()
     rows = []
@@ -53,9 +54,12 @@ def run(site: str, categories: list[str], dataset: str) -> None:
         client.close()
 
     log.info("trends coletadas: %s linhas", len(rows))
+    counts = {"rows": len(rows)}
     if rows:
         out = write_snapshot(rows, dataset=dataset, base_dir=DATA_DIR)
         log.info("arquivo: %s", out)
+        counts["output"] = out
+    return counts
 
 
 DEFAULT_ROOT_CATS = ["MLB1574", "MLB5726"]
@@ -68,7 +72,8 @@ def main():
     p.add_argument("--dataset", default="trends")
     args = p.parse_args()
 
-    run(site=args.site, categories=args.categories, dataset=args.dataset)
+    with track("collect_trends") as job:
+        job["counts"] = run(site=args.site, categories=args.categories, dataset=args.dataset)
 
 
 if __name__ == "__main__":
