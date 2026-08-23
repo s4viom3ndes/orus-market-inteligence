@@ -2,10 +2,13 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+REPO_ROOT = Path(__file__).parent.parent.parent
+ETL_ROOT = Path(__file__).parent.parent
 
-PROJECT_ROOT = Path(__file__).parent.parent
-TOKEN_FILE = PROJECT_ROOT / "tokens.json"
+load_dotenv(REPO_ROOT / ".env")
+
+PROJECT_ROOT = ETL_ROOT
+TOKEN_FILE = REPO_ROOT / "tokens.json"
 
 APP_ID = int(os.getenv("ML_APP_ID", "0"))
 CLIENT_SECRET = os.getenv("ML_CLIENT_SECRET", "")

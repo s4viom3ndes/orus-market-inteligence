@@ -13,6 +13,9 @@ jobs:
   collect:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: etl
     env:
       ML_APP_ID: ${{ secrets.ML_APP_ID }}
       ML_CLIENT_SECRET: ${{ secrets.ML_CLIENT_SECRET }}
