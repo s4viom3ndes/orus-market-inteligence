@@ -102,12 +102,32 @@ Se `.env` tem `R2_ENDPOINT` + `R2_ACCESS_KEY_ID` + `R2_SECRET_ACCESS_KEY`, o sis
 
 ## GitHub Actions
 
-Tres workflows agendados:
-- `collect_market.yml` — cron `0 */12 * * *` (a cada 12h). Coleta ofertas + enrichment. `--max-per-cat 10`. ~40 min por run.
+Quatro workflows agendados:
+- `collect_market.yml` — cron `0 3 * * *` (1x/dia). Coleta ofertas + enrichment. `--max-per-cat 10`. ~40 min por run.
 - `collect_trends.yml` — cron `15 3 * * *` (diario 03:15 UTC = 00:15 BRT). Trending searches. ~2 min.
+- `monitor_buy_box.yml` — cron `30 3 * * *` (diario, apos market). Avalia SKUs mock, envia email em mudancas. ~2 min.
 - `discover_categories.yml` — cron `30 3 * * 1` (segunda 03:30 UTC). Atualiza `state/leaves.json` no R2. `--max-depth 2`.
 
-Custo estimado: ~2400 min/mes (free tier 2000 min, extras ~$3/mes). Pra dobrar cadencia (6h), estouraria ~$22/mes.
+Custo estimado: ~1280 min/mes (dentro do free tier 2000 min).
+
+## Dashboard Streamlit
+
+`dashboard/app.py` + `dashboard/pages/`. Le direto do R2 via `dashboard/lib/r2_reader.py` (cache 10 min).
+
+Local:
+```
+cd dashboard && streamlit run app.py
+```
+
+Deploy Streamlit Cloud:
+- Aponta pro repo, main branch, `dashboard/app.py` como entry point
+- Adiciona secrets: R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET
+
+## Buy Box mock
+
+Configuracao em `etl/config/mock_client.yaml` (4 SKUs fake atrelados a catalog_product_ids reais).
+`services/buy_box_monitor.py` avalia posicao, gap, recomenda acao.
+`jobs/monitor_buy_box.py` compara com estado anterior em R2 e dispara email.
 
 Secrets necessarios no GitHub (Settings > Secrets and variables > Actions):
 - `ML_APP_ID`, `ML_CLIENT_SECRET`, `ML_REDIRECT_URI`, `ML_WEBHOOK_SECRET`

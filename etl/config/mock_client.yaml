@@ -1,0 +1,37 @@
+seller:
+  name: "VariedadesSB (mock)"
+  ml_seller_id: 2692951735
+  contact_email: "cliente@example.com"
+
+skus:
+  - sku: "SR-INOX-001"
+    catalog_product_id: "MLB24665401"
+    category_id: "MLB193633"
+    product_hint: "Abridor de Garrafa Saca Rolha Vinho Aco Inox"
+    current_price: 39.90
+    min_price: 22.00
+    target_position: 0
+
+  - sku: "RALD-INOX-4F"
+    catalog_product_id: "MLB28588387"
+    category_id: "MLB193807"
+    product_hint: "Ralador Manual Aco Inox Ke Home 4 faces"
+    current_price: 59.90
+    min_price: 46.00
+    target_position: 0
+
+  - sku: "CAB-MDR-20"
+    catalog_product_id: "MLB22930222"
+    category_id: "MLB186365"
+    product_hint: "Kit 20 Cabide de Madeira Marfim Organizador Closet"
+    current_price: 129.90
+    min_price: 72.00
+    target_position: 0
+
+  - sku: "LUM-PIXAR"
+    catalog_product_id: "MLB22949617"
+    category_id: "MLB1586"
+    product_hint: "Luminaria de Mesa Dapon Articulada Abajur Pixar"
+    current_price: 109.90
+    min_price: 68.00
+    target_position: 0
