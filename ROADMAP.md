@@ -27,7 +27,7 @@ Data: 2026-08-23.
 
 ### Infra pra vender
 - [~] **Multi-tenant + Auth (scaffold pronto em `auth/`)**: SQLite + SQLAlchemy + passlib + itsdangerous. Models: User, MLAccount, MLTokenSet, ClientSku, Session. Fluxos: signup, login, link_ml (OAuth), my_skus. Standalone `auth/app.py`, sem impacto no dashboard atual. **Falta ativar**: (a) `streamlit-cookies-manager` pra sessão real, (b) migrar `tokens.json` + `mock_client.yaml` pro DB, (c) `verify_session` no topo do dashboard cliente, (d) parquets no R2 particionados por `user_id`, (e) Postgres (Supabase/Neon) em prod.
-- [ ] **Testes automatizados**: mínimo 1 teste por serviço crítico. `pytest` em `etl/tests/`. Rodar em GH Actions em cada PR.
+- [x] **Testes automatizados mínimos**: `etl/tests/` com 31 testes cobrindo repricer (12), buy_box_monitor (5), data_health (6), search/normalize_offer (3), ml_client (5). Workflow `.github/workflows/tests.yml` roda em cada push+PR. Cobre lógica pura (dinheiro em jogo); mocks para httpx no ml_client.
 
 ### Observability / operações
 - [ ] Slack/Discord webhook alternativo ao email pra alertas de failure
