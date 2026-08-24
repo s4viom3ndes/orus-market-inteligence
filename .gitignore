@@ -6,6 +6,8 @@ state_buy_box.json
 etl/state_buy_box.json
 etl/state_leaves.json
 etl/state_jobs/
+auth/auth.db
+auth/*.db
 __pycache__/
 *.pyc
 .venv/

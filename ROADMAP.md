@@ -26,9 +26,7 @@ Data: 2026-08-23.
 - [ ] **Report semanal por email**: digest da semana enviado no domingo.
 
 ### Infra pra vender
-- [ ] **Multi-tenant**: mover `tokens.json` de arquivo único pra tabela (DuckDB ou Postgres). Cada cliente com sua conta ML autorizada. `WATCHLIST_*` por cliente.
-- [ ] **Auth no dashboard cliente**: hoje é público. Opções: Streamlit auth experimental, Cloudflare Access, ou Auth0 free tier.
-- [ ] **Onboarding UI**: novo cliente autoriza OAuth pelo próprio dashboard (não mais via savio), cadastra SKUs por form.
+- [~] **Multi-tenant + Auth (scaffold pronto em `auth/`)**: SQLite + SQLAlchemy + passlib + itsdangerous. Models: User, MLAccount, MLTokenSet, ClientSku, Session. Fluxos: signup, login, link_ml (OAuth), my_skus. Standalone `auth/app.py`, sem impacto no dashboard atual. **Falta ativar**: (a) `streamlit-cookies-manager` pra sessão real, (b) migrar `tokens.json` + `mock_client.yaml` pro DB, (c) `verify_session` no topo do dashboard cliente, (d) parquets no R2 particionados por `user_id`, (e) Postgres (Supabase/Neon) em prod.
 - [ ] **Testes automatizados**: mínimo 1 teste por serviço crítico. `pytest` em `etl/tests/`. Rodar em GH Actions em cada PR.
 
 ### Observability / operações

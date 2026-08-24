@@ -1,0 +1,7 @@
+streamlit>=1.36
+sqlalchemy>=2.0
+passlib[bcrypt]>=1.7
+itsdangerous>=2.2
+python-dotenv>=1.0
+httpx>=0.27
+pydantic>=2.7
