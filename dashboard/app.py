@@ -1,7 +1,7 @@
 import streamlit as st
 import polars as pl
 from lib.theme import setup, ACCENT
-from lib.components import bar_list_header, bar_list_row, horizontal_percent_bar, tag
+from lib.components import bar_list_header, bar_list_row, horizontal_percent_bar, tag, fmt_compact
 from lib.r2_reader import load_latest_market_snapshot, load_latest_trends, load_category_names, cat_name
 
 setup("Visão Geral")
@@ -65,7 +65,7 @@ if not winners.is_empty():
         tag_style = "neutral" if logistic == "fulfillment" else "outline"
         seller = r.get("seller_id")
         reviews = r.get("reviews_count") or 0
-        meta = f'R$ {r["price"]:,.2f} · {reviews:,.0f} aval.'.replace(",", ".")
+        meta = f'R$ {r["price"]:,.2f} · {fmt_compact(reviews)} aval.'
         bar_list_row(
             (r.get("product_name") or "?")[:60],
             visits, max_visits, meta,

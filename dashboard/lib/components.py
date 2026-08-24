@@ -10,6 +10,37 @@ TAG_STYLES = {
 }
 
 
+def fmt_compact(v) -> str:
+    """Formata numero em notacao compacta: 48.200 -> 48k, 1.234.567 -> 1.2M."""
+    if v is None:
+        return "-"
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return str(v)
+    if v >= 1_000_000_000:
+        return f"{v/1_000_000_000:.1f}B".replace(".0B", "B")
+    if v >= 1_000_000:
+        return f"{v/1_000_000:.1f}M".replace(".0M", "M")
+    if v >= 10_000:
+        return f"{v/1_000:.0f}k"
+    if v >= 1_000:
+        return f"{v/1_000:.1f}k".replace(".0k", "k")
+    if v == int(v):
+        return f"{int(v)}"
+    return f"{v:.2f}"
+
+
+def fmt_int(v) -> str:
+    """Formata int com separador ponto: 1234567 -> 1.234.567."""
+    if v is None:
+        return "-"
+    try:
+        return f"{int(v):,}".replace(",", ".")
+    except (TypeError, ValueError):
+        return str(v)
+
+
 def tag(label: str, style: str = "neutral", size_px: int = 10) -> str:
     css = TAG_STYLES.get(style, TAG_STYLES["neutral"])
     return (
@@ -33,15 +64,18 @@ def bar_list_header(label: str, bar_col_label: str, right_label: str,
 
 
 def bar_list_row(label: str, value: float, max_value: float, meta_right: str,
-                 sublabel: str | None = None, bar_width: int = 220, right_width: int = 230,
-                 tag_html: str | None = None):
+                 sublabel: str | None = None, bar_width: int = 240, right_width: int = 230,
+                 tag_html: str | None = None, value_tooltip: str | None = None):
     pct = min(100, (value / max_value * 100)) if max_value > 0 else 0
     label_block = f'<div style="font-size:14px;font-weight:800">{escape(label)}</div>'
     if sublabel:
         label_block += f'<div style="font-size:11px;opacity:0.55">{escape(sublabel)}</div>'
     tag_part = f'<div style="width:76px;flex:none">{tag_html}</div>' if tag_html else ""
 
-    value_fmt = f"{value:,.0f}".replace(",", ".") if value >= 100 else f"{value:,.2f}"
+    value_compact = fmt_compact(value) if value >= 1000 else (f"{int(value)}" if value == int(value) else f"{value:.1f}")
+    tooltip_attr = f' title="{escape(value_tooltip)}"' if value_tooltip else (
+        f' title="{fmt_int(value)}"' if value >= 1000 else ""
+    )
 
     st.markdown(
         f'<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid {DIVIDER}">'
@@ -51,7 +85,7 @@ def bar_list_row(label: str, value: float, max_value: float, meta_right: str,
         f'  <div style="flex:1;height:22px;background:{NEUTRAL_200};min-width:60px">'
         f'    <div style="width:{pct:.1f}%;height:100%;background:{ACCENT}"></div>'
         f'  </div>'
-        f'  <div style="width:60px;flex:none;font-family:Archivo,sans-serif;font-weight:800;font-size:15px">{value_fmt}</div>'
+        f'  <div style="width:70px;flex:none;text-align:right;font-family:Archivo,sans-serif;font-weight:800;font-size:15px"{tooltip_attr}>{value_compact}</div>'
         f'</div>'
         f'<div style="width:{right_width}px;flex:none;text-align:right;font-size:12px;opacity:0.65">{escape(meta_right)}</div>'
         f'</div>',
