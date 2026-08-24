@@ -12,23 +12,38 @@ NEUTRAL_200 = "#dedcdc"
 CSS = f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 
 html, body,
 [data-testid="stAppViewContainer"], [data-testid="stHeader"],
 [data-testid="stMain"] {{
-  font-family: 'Archivo', sans-serif !important;
+  font-family: 'Archivo', sans-serif;
   background: {BG} !important;
   color: {TEXT} !important;
 }}
 
-/* icones nao devem herdar Archivo */
+/* icones material devem manter sua font (senao aparece o texto do ligature) */
 span.material-symbols-rounded, span.material-symbols-outlined,
 i.material-icons, i.material-symbols-rounded,
 [class*="material-symbols"], [class*="MaterialIcon"],
 [data-testid="stExpanderIcon"] *, [data-testid="stIconMaterial"] *,
-button svg, button [class*="icon"] {{
+[data-testid="stSidebarCollapseButton"] *,
+[data-testid="stSidebarCollapsedControl"] *,
+button[kind="headerNoPadding"] *,
+[data-testid="baseButton-headerNoPadding"] *,
+button svg, button [class*="icon"], button [class*="Icon"] {{
   font-family: 'Material Symbols Rounded', 'Material Symbols Outlined', 'Material Icons' !important;
   font-feature-settings: 'liga' !important;
+  font-weight: normal !important;
+  font-style: normal !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  white-space: nowrap !important;
+  direction: ltr !important;
+  -webkit-font-feature-settings: 'liga' !important;
+  -webkit-font-smoothing: antialiased !important;
 }}
 
 h1, h2, h3, h4, h5 {{
