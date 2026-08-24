@@ -8,6 +8,7 @@ from services.ml_client import MLClient
 from services.search import iter_highlights, get_product, iter_product_items, normalize_offer
 from services.enrichment import get_visits_for, get_reviews_summary, get_questions_count
 from services.job_status import track
+from services import category_names
 from storage.parquet_writer import write_snapshot
 
 logging.basicConfig(
@@ -58,6 +59,11 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
     watched_hits = 0
     cats_ok = 0
     client = MLClient()
+
+    try:
+        category_names.ensure(categories, client)
+    except Exception as e:
+        log.warning("category_names.ensure falhou: %s", e)
 
     try:
         for ci, cat_id in enumerate(categories, 1):

@@ -2,7 +2,7 @@ import streamlit as st
 import polars as pl
 from lib.theme import setup, ACCENT
 from lib.components import bar_list_header, bar_list_row, horizontal_percent_bar, tag
-from lib.r2_reader import load_latest_market_snapshot, load_latest_trends
+from lib.r2_reader import load_latest_market_snapshot, load_latest_trends, load_category_names, cat_name
 
 setup("Visão Geral")
 
@@ -36,12 +36,14 @@ by_cat = (df.group_by("category_id").agg(
     pl.col("price").mean().round(2).alias("preco_medio"),
 ).sort("ofertas", descending=True))
 
+names = load_category_names()
 bar_list_header("Categoria", "Ofertas", "Produtos · Vend. · Preço médio")
 
 max_cat = by_cat["ofertas"].max()
 for r in by_cat.head(15).rows(named=True):
     meta = f'{r["produtos"]} · {r["vendedores"]} · R$ {r["preco_medio"]:.2f}'
-    bar_list_row(r["category_id"], r["ofertas"], max_cat, meta)
+    bar_list_row(cat_name(r["category_id"], names), r["ofertas"], max_cat, meta,
+                 sublabel=r["category_id"])
 
 if by_cat.height > 15:
     st.markdown(

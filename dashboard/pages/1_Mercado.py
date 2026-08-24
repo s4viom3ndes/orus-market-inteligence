@@ -1,7 +1,7 @@
 import streamlit as st
 import polars as pl
 from lib.theme import setup
-from lib.r2_reader import load_latest_market_snapshot
+from lib.r2_reader import load_latest_market_snapshot, load_category_names, cat_name
 
 setup("Mercado")
 st.markdown("<h1 style='font-size:34px;margin-bottom:20px'>Mercado por Categoria</h1>", unsafe_allow_html=True)
@@ -11,8 +11,15 @@ if df.is_empty():
     st.warning("Sem dados.")
     st.stop()
 
-cats = sorted(df["category_id"].unique().to_list())
-cat_id = st.selectbox("Categoria", cats, label_visibility="collapsed")
+names = load_category_names()
+cats_available = sorted(df["category_id"].unique().to_list())
+cats_sorted = sorted(cats_available, key=lambda c: cat_name(c, names).lower())
+cat_id = st.selectbox(
+    "Categoria",
+    cats_sorted,
+    format_func=lambda c: f"{cat_name(c, names)} ({c})",
+    label_visibility="collapsed",
+)
 
 sub = df.filter(pl.col("category_id") == cat_id)
 

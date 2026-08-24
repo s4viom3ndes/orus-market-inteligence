@@ -21,6 +21,16 @@ html, body,
   color: {TEXT} !important;
 }}
 
+/* icones nao devem herdar Archivo */
+span.material-symbols-rounded, span.material-symbols-outlined,
+i.material-icons, i.material-symbols-rounded,
+[class*="material-symbols"], [class*="MaterialIcon"],
+[data-testid="stExpanderIcon"] *, [data-testid="stIconMaterial"] *,
+button svg, button [class*="icon"] {{
+  font-family: 'Material Symbols Rounded', 'Material Symbols Outlined', 'Material Icons' !important;
+  font-feature-settings: 'liga' !important;
+}}
+
 h1, h2, h3, h4, h5 {{
   font-family: 'Archivo', sans-serif !important;
   font-weight: 800 !important;

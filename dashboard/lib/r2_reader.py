@@ -87,3 +87,20 @@ def load_buy_box_state() -> dict:
         return json.loads(obj["Body"].read())
     except Exception:
         return {}
+
+
+@st.cache_data(ttl=600)
+def load_category_names() -> dict:
+    """Retorna {cat_id: {name, path}} do R2. Fallback pra dict vazio."""
+    import json
+    try:
+        c = get_client()
+        obj = c.get_object(Bucket=R2_BUCKET, Key="state/category_names.json")
+        return json.loads(obj["Body"].read())
+    except Exception:
+        return {}
+
+
+def cat_name(cat_id: str, cache: dict) -> str:
+    entry = cache.get(cat_id)
+    return entry.get("name") if entry else cat_id
