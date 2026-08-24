@@ -53,6 +53,16 @@ Data: 2026-08-23.
 - [ ] Definir schema versionado dos parquets — pra evolução sem quebrar leitores antigos.
 - [ ] Timezone consistency: tudo em BRT ou tudo UTC? Hoje tá misturado.
 
+## Frequência de coleta — decisão adiada
+
+Buy box no ML muda várias vezes por dia. Cadência atual (1x/dia) é insuficiente pra cliente pagante — perda de buy box só é detectada 24h depois.
+
+**Solução desenhada**: split hot path (monitor_buy_box hourly, ~30s/run, usa `_fetch_offers_live`) + cold path (collect_market completo 1x/dia, ~40min).
+
+**Custo estimado**: 720 min/mês (hot) + 1200 min/mês (cold) = 1920 min/mês, cabe no free tier GH Actions (2000 min).
+
+**Status**: **adiado** — validar cliente com cadência diária primeiro. Implementar quando cliente confirmar que o produto tem valor e antes de fechar contrato pago.
+
 ## Contexto de decisões
 
 - **Cron 1x/dia** (não a cada hora): cabe no free tier GH Actions (~1280 min/mês de 2000).

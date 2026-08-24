@@ -13,3 +13,4 @@ __pycache__/
 .venv/
 venv/
 _streamlit_secrets_TEMP.toml
+docs/
