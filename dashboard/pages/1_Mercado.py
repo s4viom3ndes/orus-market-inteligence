@@ -45,10 +45,10 @@ st.dataframe(top, use_container_width=True, hide_index=True)
 
 st.markdown("<h3 style='margin:24px 0 14px'>Ofertas nessa categoria</h3>", unsafe_allow_html=True)
 st.dataframe(
-    sub.select([
+    sub.sort(["catalog_product_id", "rank"]).select([
         "product_name", "seller_id", "price", "shipping_logistic_type",
         "shipping_free", "condition", "rank", "is_buy_box_winner",
         "visits_30d", "reviews_count", "reviews_avg_rating",
-    ]).sort(["catalog_product_id", "rank"]),
+    ]),
     use_container_width=True, hide_index=True,
 )
