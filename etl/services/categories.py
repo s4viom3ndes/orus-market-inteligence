@@ -8,6 +8,13 @@ log = logging.getLogger(__name__)
 THROTTLE_SEC = 0.05
 
 
+# Buckets residuais ("Outros", "Outros Eletrodomesticos", ...) nunca tem ranking
+# em /highlights - medido em 10/09/2026: 0 de 167 categorias com highlights se
+# chamam "Outros", contra 20 de 43 sem highlights. Coletar so gera 404.
+def is_catch_all(name: str) -> bool:
+    return name.strip().casefold().startswith("outro")
+
+
 def get_category(client: MLClient, cat_id: str) -> dict:
     return client.get(f"/categories/{cat_id}")
 
@@ -35,6 +42,9 @@ def walk(root_id: str, client: MLClient, max_depth: int, depth: int = 0) -> Iter
 
     # se atingiu profundidade max OU eh folha real: yield e para
     if depth == max_depth or not children:
+        if is_catch_all(node["name"]):
+            log.debug("pulando bucket residual %s (%s)", node["id"], node["name"])
+            return
         yield node
         return
 

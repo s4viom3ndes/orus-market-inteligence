@@ -22,6 +22,12 @@ LEAVES_LOCAL = PROJECT_ROOT / "state_leaves.json"
 LEAVES_KEY = "state/leaves.json"
 
 
+def _is_404(exc: Exception) -> bool:
+    """True se a excecao for um HTTP 404 (httpx.HTTPStatusError ou similar)."""
+    resp = getattr(exc, "response", None)
+    return getattr(resp, "status_code", None) == 404
+
+
 def load_leaf_categories() -> list[str]:
     """Merge WATCHLIST_CATEGORIES (prioridade) + folhas descobertas do R2/local.
 
@@ -58,6 +64,7 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
     rows = []
     watched_hits = 0
     cats_ok = 0
+    cats_sem_ranking: list[str] = []
     client = MLClient()
 
     try:
@@ -70,7 +77,14 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
             try:
                 product_ids = list(iter_highlights(cat_id, client=client))
             except Exception as e:
-                log.warning("[%s/%s cat=%s] highlights falhou: %s", ci, len(categories), cat_id, e)
+                # 404 aqui e resposta esperada: o ML nao monta ranking de bestseller
+                # pra toda folha (buckets "Outros", nicho, sazonal fora de temporada).
+                # Nao e anomalia - so vira ruido e esconde 403/429/5xx de verdade.
+                if _is_404(e):
+                    cats_sem_ranking.append(cat_id)
+                    log.debug("[%s/%s cat=%s] sem highlights (404)", ci, len(categories), cat_id)
+                else:
+                    log.warning("[%s/%s cat=%s] highlights falhou: %s", ci, len(categories), cat_id, e)
                 continue
 
             if max_per_cat:
@@ -129,10 +143,16 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
     finally:
         client.close()
 
+    if cats_sem_ranking:
+        log.info("%s/%s categorias com highlights (%s sem ranking no ML)",
+                 cats_ok, len(categories), len(cats_sem_ranking))
+        log.debug("sem ranking: %s", ", ".join(cats_sem_ranking))
+
     log.info("coleta concluida: %s linhas | %s da watchlist", len(rows), watched_hits)
 
     counts = {
         "categories_ok": cats_ok,
+        "categories_sem_ranking": len(cats_sem_ranking),
         "rows": len(rows),
         "watched_hits": watched_hits,
         "unique_products": len({r["catalog_product_id"] for r in rows}),

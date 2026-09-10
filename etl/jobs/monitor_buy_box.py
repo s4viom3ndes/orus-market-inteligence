@@ -10,7 +10,20 @@ logging.basicConfig(
 log = logging.getLogger("monitor_buy_box")
 
 
-def format_email(report: dict) -> tuple[str, str]:
+def _money(v) -> str:
+    """Formata valor monetario tolerando None (SKU sem dados no snapshot)."""
+    return f"R$ {v:.2f}" if v is not None else "-"
+
+
+def _side(s: dict | None) -> str:
+    """Renderiza um lado de uma mudanca (before/after) como texto legivel."""
+    s = s or {}
+    status = s.get("status") or "sem registro"
+    winner = s.get("winner")
+    return f"{status} (winner {winner})" if winner is not None else status
+
+
+def format_email(report: dict) -> tuple[str, str, str]:
     seller = report["seller"]
     changes = report["changes"]
     results = report["results"]
@@ -22,16 +35,19 @@ def format_email(report: dict) -> tuple[str, str]:
           <td>{r['sku']}</td>
           <td>{(r.get('product_name') or '')[:60]}</td>
           <td>{r['status']}</td>
-          <td>R$ {r['current_price']:.2f}</td>
-          <td>R$ {r['winner_price']:.2f if r['winner_price'] else 0}</td>
+          <td>{_money(r['current_price'])}</td>
+          <td>{_money(r['winner_price'])}</td>
           <td>{r['n_competitors']}</td>
-          <td>{r['recommendation']}</td>
+          <td>{r['recommendation'] or '-'}</td>
         </tr>"""
         for r in results
     )
     changes_html = ""
     if changes:
-        items = "".join(f"<li><b>{c['sku']}</b>: {c['before']} -> {c['after']}</li>" for c in changes)
+        items = "".join(
+            f"<li><b>{c['sku']}</b>: {_side(c['before'])} -> {_side(c['after'])}</li>"
+            for c in changes
+        )
         changes_html = f"<h3>Mudancas desde ultima checagem</h3><ul>{items}</ul>"
 
     body_html = f"""
