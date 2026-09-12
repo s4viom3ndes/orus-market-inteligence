@@ -111,3 +111,67 @@ def test_smtp_host_trata_secret_vazio(monkeypatch):
     finally:
         monkeypatch.delenv("SMTP_HOST", raising=False)
         importlib.reload(mod)
+
+
+# --- main(): email_sent tem que refletir o resultado real do send ---
+
+class _FakeNotifier:
+    """Stub de email_notifier: send() nunca levanta, so devolve o dict."""
+
+    def __init__(self, result):
+        self.result = result
+        self.calls = 0
+
+    def is_configured(self):
+        return True
+
+    def send(self, to, subject, html, text=None):
+        self.calls += 1
+        return self.result
+
+
+def _run_main(monkeypatch, notifier, changes):
+    import jobs.monitor_buy_box as mod
+    captured = {}
+
+    class _Job(dict):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            captured.update(self)
+            return False
+
+    report = {
+        "seller": {"name": "S", "contact_email": "a@b.com"},
+        "changes": changes,
+        "results": [_result()],
+    }
+    monkeypatch.setattr(mod, "run_monitor", lambda: report)
+    monkeypatch.setattr(mod, "email_notifier", notifier)
+    monkeypatch.setattr(mod, "track", lambda name: _Job())
+    mod.main()
+    return captured.get("counts", {})
+
+
+def test_email_sent_false_quando_smtp_falha(monkeypatch):
+    """Regressao: antes marcava True incondicionalmente e o job ficava verde."""
+    n = _FakeNotifier({"sent": False, "error": "auth_error: 535 bad creds"})
+    counts = _run_main(monkeypatch, n, changes=[{"sku": "A", "before": {}, "after": {}}])
+    assert n.calls == 1
+    assert counts["email_sent"] is False
+    assert "auth_error" in counts["email_error"]
+
+
+def test_email_sent_true_quando_envia(monkeypatch):
+    n = _FakeNotifier({"sent": True, "error": None})
+    counts = _run_main(monkeypatch, n, changes=[{"sku": "A", "before": {}, "after": {}}])
+    assert counts["email_sent"] is True
+    assert counts["email_error"] is None
+
+
+def test_sem_mudancas_nao_chama_send(monkeypatch):
+    n = _FakeNotifier({"sent": True, "error": None})
+    counts = _run_main(monkeypatch, n, changes=[])
+    assert n.calls == 0
+    assert counts["email_sent"] is False

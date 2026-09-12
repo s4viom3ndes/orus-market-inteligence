@@ -77,11 +77,18 @@ def main():
                      r["recommendation"])
 
         email_sent = False
+        email_error = None
         if report["changes"] and email_notifier.is_configured():
             seller = report["seller"]
             subject, html, text = format_email(report)
-            email_notifier.send(seller["contact_email"], subject, html, text)
-            email_sent = True
+            # send() engole toda excecao e devolve o resultado no dict - ignorar
+            # isso fazia o job terminar verde reportando email_sent=True mesmo
+            # quando o SMTP falhava, escondendo alerta perdido.
+            res = email_notifier.send(seller["contact_email"], subject, html, text)
+            email_sent = bool(res.get("sent"))
+            email_error = res.get("error")
+            if not email_sent:
+                log.error("mudancas detectadas mas email NAO foi enviado: %s", email_error)
         elif not report["changes"]:
             log.info("nenhuma mudanca, email nao enviado")
 
@@ -89,6 +96,7 @@ def main():
             "skus_avaliados": len(report["results"]),
             "changes": len(report["changes"]),
             "email_sent": email_sent,
+            "email_error": email_error,
             "statuses": {r["sku"]: r["status"] for r in report["results"]},
         }
 
