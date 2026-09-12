@@ -9,6 +9,7 @@ from services.search import iter_highlights, get_product, iter_product_items, no
 from services.enrichment import get_visits_for, get_reviews_summary, get_questions_count
 from services.job_status import track
 from services import category_names
+from services import highlights_tracker
 from storage.parquet_writer import write_snapshot
 
 logging.basicConfig(
@@ -65,6 +66,7 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
     watched_hits = 0
     cats_ok = 0
     cats_sem_ranking: list[str] = []
+    cats_com_ranking: list[str] = []
     client = MLClient()
 
     try:
@@ -95,6 +97,7 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
 
             log.info("[%s/%s] cat=%s -> %s produtos", ci, len(categories), cat_id, len(product_ids))
             cats_ok += 1
+            cats_com_ranking.append(cat_id)
 
             cat_offers: list[tuple[dict, dict]] = []
             for pid in product_ids:
@@ -148,11 +151,14 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
                  cats_ok, len(categories), len(cats_sem_ranking))
         log.debug("sem ranking: %s", ", ".join(cats_sem_ranking))
 
+    rastreio = highlights_tracker.record(cats_sem_ranking, cats_com_ranking)
+
     log.info("coleta concluida: %s linhas | %s da watchlist", len(rows), watched_hits)
 
     counts = {
         "categories_ok": cats_ok,
         "categories_sem_ranking": len(cats_sem_ranking),
+        "categories_recuperadas": len(rastreio.get("recovered", [])),
         "rows": len(rows),
         "watched_hits": watched_hits,
         "unique_products": len({r["catalog_product_id"] for r in rows}),
