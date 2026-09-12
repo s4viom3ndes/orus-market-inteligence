@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 from src.config import PROJECT_ROOT, WATCHLIST_SELLERS, WATCHLIST_CATEGORIES, USE_REMOTE_STORAGE
 from services.ml_client import MLClient
-from services.search import iter_highlights, get_product, iter_product_items, normalize_offer
+from services.search import iter_highlights, get_product_safe, iter_product_items, normalize_offer
 from services.enrichment import get_visits_for, get_reviews_summary, get_questions_count
 from services.job_status import track
 from services import category_names
@@ -77,7 +77,7 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
     try:
         for ci, cat_id in enumerate(categories, 1):
             try:
-                product_ids = list(iter_highlights(cat_id, client=client))
+                destaques = list(iter_highlights(cat_id, client=client))
             except Exception as e:
                 # 404 aqui e resposta esperada: o ML nao monta ranking de bestseller
                 # pra toda folha (buckets "Outros", nicho, sazonal fora de temporada).
@@ -90,36 +90,39 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
                 continue
 
             if max_per_cat:
-                product_ids = product_ids[:max_per_cat]
+                destaques = destaques[:max_per_cat]
 
-            if not product_ids:
+            if not destaques:
                 continue
 
-            log.info("[%s/%s] cat=%s -> %s produtos", ci, len(categories), cat_id, len(product_ids))
+            n_proprios = sum(1 for d in destaques if d["type"] == "USER_PRODUCT")
+            log.info("[%s/%s] cat=%s -> %s produtos (%s anuncio proprio)",
+                     ci, len(categories), cat_id, len(destaques), n_proprios)
             cats_ok += 1
             cats_com_ranking.append(cat_id)
 
-            cat_offers: list[tuple[dict, dict]] = []
-            for pid in product_ids:
+            cat_offers: list[tuple[dict, dict, str]] = []
+            for d in destaques:
+                pid, ptype = d["id"], d["type"]
                 try:
-                    product = get_product(pid, client)
+                    product = get_product_safe(pid, ptype, client)
                     offers = list(iter_product_items(pid, client))
                 except Exception as e:
                     log.debug("falha em %s: %s", pid, e)
                     continue
                 for offer in offers:
-                    cat_offers.append((product, offer))
+                    cat_offers.append((product, offer, ptype))
 
             visits_map = {}
             if enrich and cat_offers:
-                winner_item_ids = [o["item_id"] for _, o in cat_offers
+                winner_item_ids = [o["item_id"] for _, o, _ in cat_offers
                                    if o.get("_rank") == 0 and o.get("item_id")]
                 visits_map = get_visits_for(winner_item_ids, client)
 
             reviews_cache: dict[str, dict] = {}
             questions_cache: dict[str, int | None] = {}
 
-            for product, offer in cat_offers:
+            for product, offer, ptype in cat_offers:
                 iid = offer.get("item_id")
                 pid_key = product.get("id")
 
@@ -139,6 +142,7 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
                     reviews_count=(reviews or {}).get("count"),
                     reviews_avg=(reviews or {}).get("avg_rating"),
                     questions_count=questions,
+                    product_type=ptype,
                 )
                 rows.append(row)
                 if row["is_watched_seller"]:
@@ -162,6 +166,7 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
         "rows": len(rows),
         "watched_hits": watched_hits,
         "unique_products": len({r["catalog_product_id"] for r in rows}),
+        "rows_anuncio_proprio": sum(1 for r in rows if r["product_type"] == "USER_PRODUCT"),
         "unique_sellers": len({r["seller_id"] for r in rows}),
     }
 
