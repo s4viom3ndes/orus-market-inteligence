@@ -71,7 +71,8 @@ def push(nome: str, caminho=None) -> str:
 def listar() -> list[str]:
     """Nomes dos clientes com config no R2."""
     if not USE_REMOTE_STORAGE:
-        return [p.stem.removeprefix("client_") for p in LOCAL_DIR.glob("client_*.yaml")]
+        # glob nao garante ordem: NTFS devolve alfabetico, ext4 (o CI) nao
+        return sorted(p.stem.removeprefix("client_") for p in LOCAL_DIR.glob("client_*.yaml"))
     from storage.r2 import get_client
     from src.config import R2_BUCKET
     c = get_client()
