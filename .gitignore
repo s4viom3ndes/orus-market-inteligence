@@ -14,3 +14,10 @@ __pycache__/
 venv/
 _streamlit_secrets_TEMP.toml
 docs/
+
+# Dados de cliente e pesquisa comercial: repositorio e PUBLICO.
+# O material fica em OneDrive/Documentos/Orus - Comercial, fora do git.
+etl/config/client_*.yaml
+etl/scripts/mercado_cliente.py
+etl/scripts/simular_cliente.py
+etl/scripts/simular_defesa.py
