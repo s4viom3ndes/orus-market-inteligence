@@ -4,6 +4,11 @@ seller:
   contact_email: "savioalexandre202@gmail.com"
   has_full: false
 
+# custo_compra: preco pago ao fornecedor, por unidade. E o unico campo que nao
+# da pra inferir da API, e sem ele o price_optimizer nao consegue separar preco
+# lucrativo de prejuizo - devolve status "sem_custo" e o email cobra o numero.
+# Os valores abaixo sao PROVISORIOS, postos para o pipeline rodar ponta a ponta.
+
 defaults:
   strategy: "beat_winner"
   beat_delta: 0.01
@@ -16,6 +21,7 @@ skus:
     category_id: "MLB193633"
     product_hint: "Abridor de Garrafa Saca Rolha Vinho Aco Inox"
     current_price: 39.90
+    custo_compra: 13.00      # PROVISORIO - confirmar com o cliente
     min_price: 22.00
     max_price: 60.00
     target_position: 0
@@ -25,6 +31,7 @@ skus:
     category_id: "MLB193807"
     product_hint: "Ralador Manual Aco Inox Ke Home 4 faces"
     current_price: 59.90
+    custo_compra: 28.00      # PROVISORIO - confirmar com o cliente
     min_price: 46.00
     max_price: 90.00
     target_position: 0
@@ -34,6 +41,7 @@ skus:
     category_id: "MLB186365"
     product_hint: "Kit 20 Cabide de Madeira Marfim Organizador Closet"
     current_price: 129.90
+    custo_compra: 55.00      # PROVISORIO - confirmar com o cliente
     min_price: 72.00
     max_price: 180.00
     target_position: 0
@@ -43,6 +51,7 @@ skus:
     category_id: "MLB1586"
     product_hint: "Luminaria de Mesa Dapon Articulada Abajur Pixar"
     current_price: 109.90
+    custo_compra: 52.00      # PROVISORIO - confirmar com o cliente
     min_price: 68.00
     max_price: 160.00
     target_position: 0

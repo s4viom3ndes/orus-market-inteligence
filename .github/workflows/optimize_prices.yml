@@ -1,0 +1,57 @@
+name: optimize-prices
+
+on:
+  schedule:
+    # 04:00 UTC = 01:00 BRT. Depois do collect_market (03:00) e do
+    # monitor_buy_box (03:30), porque le o snapshot do dia.
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: "sequencial (MDP) ou estatico"
+        type: choice
+        options: [sequencial, estatico]
+        default: sequencial
+      sempre:
+        description: "enviar email mesmo sem recomendacao acionavel"
+        type: boolean
+        default: false
+
+concurrency:
+  group: optimize-prices
+  cancel-in-progress: false
+
+jobs:
+  optimize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: etl
+    env:
+      ML_APP_ID: ${{ secrets.ML_APP_ID }}
+      ML_CLIENT_SECRET: ${{ secrets.ML_CLIENT_SECRET }}
+      ML_REDIRECT_URI: ${{ secrets.ML_REDIRECT_URI }}
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      SMTP_HOST: ${{ secrets.SMTP_HOST }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USER: ${{ secrets.SMTP_USER }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      SMTP_FROM: ${{ secrets.SMTP_FROM }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Optimize prices
+        run: |
+          python -m jobs.optimize_prices \
+            --modo "${{ inputs.modo || 'sequencial' }}" \
+            ${{ inputs.sempre && '--sempre' || '' }}
