@@ -17,6 +17,7 @@ from src.config import PROJECT_ROOT
 from services.ml_client import MLClient
 from services.buy_box_monitor import (load_mock_client, load_latest_snapshot,
                                       _fetch_offers_live, ordenar_por_rank)
+from services import client_config
 from services.price_optimizer import otimizar
 from services.price_model import TARIFAS
 from services.job_status import track
@@ -40,8 +41,13 @@ def _pct(v) -> str:
     return f"{100*v:.1f}%" if v is not None else "-"
 
 
-def run(modo: str = "sequencial") -> tuple[list[dict], dict]:
-    cfg = load_mock_client()
+def carregar_cfg(cliente: str | None):
+    """Config do cliente vem do R2 (repo e publico); sem --cliente, usa o mock."""
+    return client_config.load(cliente) if cliente else load_mock_client()
+
+
+def run(modo: str = "sequencial", cliente: str | None = None) -> tuple[list[dict], dict]:
+    cfg = carregar_cfg(cliente)
     snapshot = load_latest_snapshot()
     seller = cfg.get("seller", {}) or {}
     tem_full = bool(seller.get("has_full", False))
@@ -55,7 +61,8 @@ def run(modo: str = "sequencial") -> tuple[list[dict], dict]:
         if antes != snapshot.height:
             log.info("ignorando %s linhas de anuncio proprio", antes - snapshot.height)
 
-    log.info("otimizando %s SKUs | modo=%s | has_full=%s", len(cfg["skus"]), modo, tem_full)
+    log.info("otimizando %s SKUs de %s | modo=%s | has_full=%s",
+             len(cfg["skus"]), seller.get("name", "?"), modo, tem_full)
 
     linhas = []
     client = MLClient()
@@ -88,6 +95,7 @@ def run(modo: str = "sequencial") -> tuple[list[dict], dict]:
         contagem[r["status"]] = contagem.get(r["status"], 0) + 1
 
     return linhas, {
+        "cliente": cliente or "mock",
         "skus_avaliados": len(linhas),
         "por_status": contagem,
         "modo": modo,
@@ -172,11 +180,12 @@ def main():
     p.add_argument("--sempre", action="store_true",
                    help="envia email mesmo sem recomendacao acionavel")
     p.add_argument("--sem-email", action="store_true", help="so calcula, nao envia")
+    p.add_argument("--cliente", help="nome do config em state/clients/{nome}.yaml no R2")
     args = p.parse_args()
 
     with track("optimize_prices") as job:
-        linhas, contagem = run(modo=args.modo)
-        cfg = load_mock_client()
+        linhas, contagem = run(modo=args.modo, cliente=args.cliente)
+        cfg = carregar_cfg(args.cliente)
         seller = cfg.get("seller", {}) or {}
 
         acionavel = any(r["status"] in ACIONAVEIS for r in linhas)
