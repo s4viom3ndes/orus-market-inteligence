@@ -6,7 +6,7 @@ from pathlib import Path
 from src.config import PROJECT_ROOT, WATCHLIST_SELLERS, WATCHLIST_CATEGORIES, USE_REMOTE_STORAGE
 from services.ml_client import MLClient
 from services.search import iter_highlights, get_product_safe, iter_product_items, normalize_offer
-from services.enrichment import get_visits_for, get_reviews_summary, get_questions_count
+from services.enrichment import get_visits_for, get_reviews_summary, get_questions_count, get_seller_info
 from services.job_status import track
 from services import category_names
 from services import highlights_tracker
@@ -68,6 +68,7 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
     cats_sem_ranking: list[str] = []
     cats_com_ranking: list[str] = []
     client = MLClient()
+    seller_cache: dict[int, dict] = {}
 
     try:
         category_names.ensure(categories, client)
@@ -125,6 +126,7 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
             for product, offer, ptype in cat_offers:
                 iid = offer.get("item_id")
                 pid_key = product.get("id")
+                sid = offer.get("seller_id")
 
                 reviews = None
                 questions = None
@@ -135,6 +137,12 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
                     reviews = reviews_cache[pid_key]
                     questions = questions_cache[pid_key]
 
+                sinfo = None
+                if enrich and sid is not None:
+                    if sid not in seller_cache:
+                        seller_cache[sid] = get_seller_info(sid, client)
+                    sinfo = seller_cache[sid]
+
                 row = normalize_offer(
                     product, offer, captured_at,
                     watchlist_sellers=watch, category_id=cat_id,
@@ -143,6 +151,7 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
                     reviews_avg=(reviews or {}).get("avg_rating"),
                     questions_count=questions,
                     product_type=ptype,
+                    seller_info=sinfo,
                 )
                 rows.append(row)
                 if row["is_watched_seller"]:
@@ -168,6 +177,7 @@ def run(categories: list[str], dataset: str, enrich: bool = True, max_per_cat: i
         "unique_products": len({r["catalog_product_id"] for r in rows}),
         "rows_anuncio_proprio": sum(1 for r in rows if r["product_type"] == "USER_PRODUCT"),
         "unique_sellers": len({r["seller_id"] for r in rows}),
+        "sellers_enriched": sum(1 for v in seller_cache.values() if v.get("nickname")),
     }
 
     if rows:

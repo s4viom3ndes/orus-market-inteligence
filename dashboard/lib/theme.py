@@ -163,6 +163,7 @@ NAV_PAGES = [
     ("pages/2_Buy_Box.py", "Buy Box"),
     ("pages/3_Repricer.py", "Repricer"),
     ("pages/4_Trends.py", "Trends"),
+    ("pages/5_Historico.py", "Histórico"),
 ]
 
 

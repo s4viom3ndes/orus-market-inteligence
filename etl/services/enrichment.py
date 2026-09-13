@@ -48,3 +48,38 @@ def get_questions_count(item_id: str, client: MLClient) -> int | None:
     except Exception as e:
         log.debug("questions falhou %s: %s", item_id, e)
         return None
+
+
+def get_seller_info(seller_id: int, client: MLClient) -> dict:
+    """Reputacao publica do seller: /users/{id}. Sempre retorna dict (chaves None se falhar)."""
+    empty = {
+        "nickname": None,
+        "reputation_level": None,
+        "power_status": None,
+        "tx_total": None,
+        "ratings_negative": None,
+    }
+    try:
+        data = client.get(f"/users/{seller_id}")
+    except Exception as e:
+        log.debug("seller %s falhou: %s", seller_id, e)
+        return empty
+    rep = data.get("seller_reputation") or {}
+    tx = rep.get("transactions") or {}
+    ratings = tx.get("ratings") or {}
+    return {
+        "nickname": data.get("nickname"),
+        "reputation_level": rep.get("level_id"),
+        "power_status": rep.get("power_seller_status"),
+        "tx_total": tx.get("total"),
+        "ratings_negative": ratings.get("negative"),
+    }
+
+
+def get_sellers_for(seller_ids: list[int], client: MLClient) -> dict[int, dict]:
+    """Cache de reputacao por seller_id (dedup ja feita pelo caller)."""
+    results: dict[int, dict] = {}
+    for sid in seller_ids:
+        results[sid] = get_seller_info(sid, client)
+        time.sleep(THROTTLE_SEC)
+    return results

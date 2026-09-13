@@ -6,7 +6,7 @@ Data: 2026-08-23.
 ## 🎯 Curto prazo (fecha demo pra cliente)
 
 - [x] Deploy admin em Streamlit Cloud
-- [ ] Deploy dashboard cliente em Streamlit Cloud
+- [x] Deploy dashboard cliente em Streamlit Cloud
 - [ ] Refinamento visual do dashboard (via Claude Design)
 - [x] Fix visits enrichment (1-per-call, só winners)
 - [x] Fix mock SKU coverage (live fallback quando fora do snapshot)

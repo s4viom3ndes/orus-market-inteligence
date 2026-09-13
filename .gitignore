@@ -4,6 +4,8 @@ data/
 state_leaves.json
 state_buy_box.json
 etl/state_buy_box.json
+etl/state_highlights_404.json
+state_highlights_404.json
 etl/state_leaves.json
 etl/state_jobs/
 auth/auth.db

@@ -90,6 +90,16 @@ def load_buy_box_state() -> dict:
 
 
 @st.cache_data(ttl=600)
+def load_buy_box_history() -> pl.DataFrame:
+    """Concatena todos os snapshots de buy_box_history/date=*."""
+    snaps = list_snapshots("buy_box_history/")
+    if not snaps:
+        return pl.DataFrame()
+    dfs = [read_parquet(s["key"]) for s in snaps]
+    return pl.concat(dfs, how="diagonal_relaxed")
+
+
+@st.cache_data(ttl=600)
 def load_category_names() -> dict:
     """Retorna {cat_id: {name, path}} do R2. Fallback pra dict vazio."""
     import json
