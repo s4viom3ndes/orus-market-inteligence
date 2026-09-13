@@ -175,3 +175,74 @@ def test_sem_mudancas_nao_chama_send(monkeypatch):
     counts = _run_main(monkeypatch, n, changes=[])
     assert n.calls == 0
     assert counts["email_sent"] is False
+
+
+# --- destinatarios extras via secret NOTIFY_EMAILS ---
+
+def test_extras_sao_somados_ao_destinatario(monkeypatch):
+    from services.email_notifier import destinatarios
+    monkeypatch.setenv("NOTIFY_EMAILS", "extra@x.com")
+    assert destinatarios("dono@x.com") == ["dono@x.com", "extra@x.com"]
+
+
+def test_secret_vazio_nao_adiciona_ninguem(monkeypatch):
+    """GH Actions injeta secret ausente como string vazia."""
+    from services.email_notifier import destinatarios
+    monkeypatch.setenv("NOTIFY_EMAILS", "")
+    assert destinatarios("dono@x.com") == ["dono@x.com"]
+
+
+def test_duplicata_nao_repete_mesmo_com_caixa_diferente(monkeypatch):
+    from services.email_notifier import destinatarios
+    monkeypatch.setenv("NOTIFY_EMAILS", " Dono@X.com , outro@x.com,, ")
+    assert destinatarios("dono@x.com") == ["dono@x.com", "outro@x.com"]
+
+
+def test_varios_extras_e_to_como_lista(monkeypatch):
+    from services.email_notifier import destinatarios
+    monkeypatch.setenv("NOTIFY_EMAILS", "b@x.com,c@x.com")
+    assert destinatarios(["a@x.com"]) == ["a@x.com", "b@x.com", "c@x.com"]
+
+
+def test_sem_nenhum_destinatario_nao_tenta_enviar(monkeypatch):
+    import services.email_notifier as en
+    monkeypatch.setenv("NOTIFY_EMAILS", "")
+    monkeypatch.setattr(en, "_log_history", lambda r: None)
+    r = en.send(None, "assunto", "<p>x</p>")
+    assert r["sent"] is False
+    assert r["error"] == "sem_destinatario"
+
+
+def test_send_entrega_para_todos_no_cabecalho(monkeypatch):
+    import services.email_notifier as en
+    enviados = []
+
+    class _SMTP:
+        def __init__(self, *a, **k): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def starttls(self): pass
+        def login(self, *a): pass
+        def send_message(self, msg): enviados.append(msg)
+
+    monkeypatch.setenv("NOTIFY_EMAILS", "yago@x.com")
+    monkeypatch.setattr(en, "SMTP_USER", "u")
+    monkeypatch.setattr(en, "SMTP_PASSWORD", "p")
+    monkeypatch.setattr(en.smtplib, "SMTP", _SMTP)
+    monkeypatch.setattr(en, "_log_history", lambda r: None)
+
+    r = en.send("dono@x.com", "assunto", "<p>x</p>")
+    assert r["sent"] is True
+    assert r["to"] == "dono@x.com, yago@x.com"
+    assert enviados[0]["To"] == "dono@x.com, yago@x.com"
+
+
+def test_chave_do_log_usa_so_o_primeiro_destinatario(monkeypatch):
+    """Virgula e espaco nao podem ir para o nome do objeto no R2."""
+    import services.email_notifier as en
+    import storage.r2 as r2
+    chaves = []
+    monkeypatch.setattr(en, "USE_REMOTE_STORAGE", True)
+    monkeypatch.setattr(r2, "upload_bytes", lambda data, key, content_type=None: chaves.append(key))
+    en._log_history({"to": "dono@x.com, yago@x.com", "at": 123, "sent": True})
+    assert chaves == ["notification_log/123_dono_at_x.com.json"]

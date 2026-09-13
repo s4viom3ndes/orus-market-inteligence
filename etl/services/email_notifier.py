@@ -21,15 +21,41 @@ def is_configured() -> bool:
     return bool(SMTP_USER and SMTP_PASSWORD)
 
 
-def send(to: str, subject: str, body_html: str, body_text: str | None = None) -> dict:
+def destinatarios(to) -> list[str]:
+    """Destinatario do job + os extras do secret NOTIFY_EMAILS, sem repetir.
+
+    Os extras vem de secret e nao do repo porque o repositorio e publico, e
+    email de terceiro nao pode ficar versionado. Lido a cada chamada, nao no
+    import, para que trocar o secret nao exija reiniciar nada.
+    """
+    brutos = [to] if isinstance(to, str) or to is None else list(to)
+    brutos.append(os.getenv("NOTIFY_EMAILS") or "")
+    vistos, saida = set(), []
+    for item in brutos:
+        for email in (item or "").split(","):
+            email = email.strip()
+            if email and email.lower() not in vistos:
+                vistos.add(email.lower())
+                saida.append(email)
+    return saida
+
+
+def send(to, subject: str, body_html: str, body_text: str | None = None) -> dict:
     """Envia email. Retorna dict com status pra log/notification history."""
+    lista = destinatarios(to)
     result = {
-        "to": to,
+        "to": ", ".join(lista),
         "subject": subject,
         "at": int(time.time()),
         "sent": False,
         "error": None,
     }
+
+    if not lista:
+        result["error"] = "sem_destinatario"
+        log.warning("nenhum destinatario definido - notificacao pulada")
+        _log_history(result)
+        return result
 
     if not is_configured():
         result["error"] = "smtp_not_configured"
@@ -40,7 +66,7 @@ def send(to: str, subject: str, body_html: str, body_text: str | None = None) ->
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = SMTP_FROM
-    msg["To"] = to
+    msg["To"] = result["to"]
     msg.set_content(body_text or "Este email requer client HTML para visualizacao.")
     msg.add_alternative(body_html, subtype="html")
 
@@ -50,7 +76,7 @@ def send(to: str, subject: str, body_html: str, body_text: str | None = None) ->
             s.login(SMTP_USER, SMTP_PASSWORD)
             s.send_message(msg)
         result["sent"] = True
-        log.info("email enviado pra %s | subject=%s", to, subject)
+        log.info("email enviado pra %s | subject=%s", result["to"], subject)
     except smtplib.SMTPAuthenticationError as e:
         result["error"] = f"auth_error: {e}"
         log.error("SMTP auth falhou: %s", e)
@@ -68,7 +94,12 @@ def _log_history(entry: dict) -> None:
         return
     try:
         from storage.r2 import upload_bytes
-        key = f"notification_log/{entry['at']}_{entry['to'].replace('@','_at_')}.json"
+        # com varios destinatarios, a chave usa so o primeiro: virgula e espaco
+        # nao entram em nome de objeto. A lista completa fica dentro do JSON.
+        primeiro = (entry.get("to") or "sem_destinatario").split(",")[0].strip()
+        seguro = "".join(c if c.isalnum() or c in "._-" else "_"
+                         for c in primeiro.replace("@", "_at_"))
+        key = f"notification_log/{entry['at']}_{seguro}.json"
         upload_bytes(json.dumps(entry, indent=2).encode(), key, content_type="application/json")
     except Exception as e:
         log.warning("nao consegui gravar historico de notificacao no R2: %s", e)

@@ -26,6 +26,7 @@ jobs:
       SMTP_USER: ${{ secrets.SMTP_USER }}
       SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
       SMTP_FROM: ${{ secrets.SMTP_FROM }}
+      NOTIFY_EMAILS: ${{ secrets.NOTIFY_EMAILS }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
