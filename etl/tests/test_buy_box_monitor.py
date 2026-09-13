@@ -55,3 +55,29 @@ def test_gap_calculado_corretamente(snapshot):
            "current_price": 120.0, "min_price": 50.0, "target_position": 0}
     r = evaluate_sku(sku, snapshot)
     assert r["gap_to_winner"] == 20.0
+
+
+def test_evaluate_sku_sobrevive_a_live_fetch_falho(monkeypatch):
+    """Regressao: _fetch_offers_live devolve pl.DataFrame() sem schema quando a
+    busca falha, e encadear .sort("rank") nisso derrubava o job inteiro."""
+    import services.buy_box_monitor as mod
+
+    monkeypatch.setattr(mod, "_fetch_offers_live", lambda *a, **k: pl.DataFrame())
+
+    class _C:
+        def close(self): pass
+
+    sku = {"sku": "S1", "catalog_product_id": "NAO_EXISTE", "category_id": "MLB999",
+           "current_price": 50.0, "min_price": 20.0, "target_position": 0}
+    vazio = pl.DataFrame({"catalog_product_id": [], "rank": [], "price": []})
+
+    r = mod.evaluate_sku(sku, vazio, client=_C())
+    assert r["status"] == "no_data"
+    assert r["winner_price"] is None
+
+
+def test_ordenar_por_rank_tolera_dataframe_sem_schema():
+    from services.buy_box_monitor import ordenar_por_rank
+    assert ordenar_por_rank(pl.DataFrame()).is_empty()
+    assert ordenar_por_rank(pl.DataFrame({"price": [1.0]})).height == 1
+    assert ordenar_por_rank(pl.DataFrame({"rank": [2, 0]}))["rank"].to_list() == [0, 2]

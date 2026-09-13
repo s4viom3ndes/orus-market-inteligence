@@ -69,6 +69,22 @@ def _save_state(state: dict) -> None:
         upload_bytes(payload, STATE_KEY, content_type="application/json")
 
 
+def ordenar_por_rank(df: pl.DataFrame) -> pl.DataFrame:
+    """sort("rank") tolerante a DataFrame sem schema.
+
+    _fetch_offers_live devolve pl.DataFrame() puro quando a busca falha - sem
+    coluna nenhuma - e sort numa coluna inexistente levanta ColumnNotFoundError.
+    Como o fallback live falha de forma intermitente, encadear .sort("rank") nele
+    derruba o job de vez em quando.
+
+    Filtrar um snapshot NAO tem esse problema (filter preserva o schema mesmo
+    vazio); o risco e exclusivo do retorno de falha do fetch.
+    """
+    if df.is_empty() or "rank" not in df.columns:
+        return df
+    return df.sort("rank")
+
+
 def _fetch_offers_live(pid: str, category_id: str, client: MLClient) -> pl.DataFrame:
     """Busca ofertas do catalog product direto do ML (fallback quando nao esta no snapshot)."""
     try:
@@ -91,7 +107,7 @@ def evaluate_sku(sku_cfg: dict, snapshot: pl.DataFrame, client: MLClient | None 
 
     if offers.is_empty() and client is not None:
         log.info("SKU %s (%s) nao no snapshot, buscando live...", sku_cfg["sku"], pid)
-        offers = _fetch_offers_live(pid, sku_cfg["category_id"], client).sort("rank")
+        offers = ordenar_por_rank(_fetch_offers_live(pid, sku_cfg["category_id"], client))
 
     result = {
         "sku": sku_cfg["sku"],

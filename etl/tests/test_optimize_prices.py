@@ -2,7 +2,8 @@
 import polars as pl
 import pytest
 
-from jobs.optimize_prices import _ordenar, format_email
+from jobs.optimize_prices import format_email
+from services.buy_box_monitor import ordenar_por_rank as _ordenar
 
 
 def _r(**over):

@@ -8,7 +8,8 @@ import polars as pl
 
 from src.config import PROJECT_ROOT, R2_BUCKET, USE_REMOTE_STORAGE
 from services.ml_client import MLClient
-from services.buy_box_monitor import load_mock_client, load_latest_snapshot, _fetch_offers_live
+from services.buy_box_monitor import (load_mock_client, load_latest_snapshot,
+                                      _fetch_offers_live, ordenar_por_rank)
 from services.repricer import suggest
 from services.job_status import track
 from storage.parquet_writer import write_snapshot
@@ -37,7 +38,7 @@ def run() -> dict:
             pid = sku_cfg["catalog_product_id"]
             offers = snapshot.filter(pl.col("catalog_product_id") == pid).sort("rank")
             if offers.is_empty():
-                offers = _fetch_offers_live(pid, sku_cfg["category_id"], client).sort("rank")
+                offers = ordenar_por_rank(_fetch_offers_live(pid, sku_cfg["category_id"], client))
 
             sug = suggest(sku_cfg, offers, seller_has_full, defaults)
             sug["at"] = int(time.time())

@@ -15,7 +15,8 @@ import polars as pl
 
 from src.config import PROJECT_ROOT
 from services.ml_client import MLClient
-from services.buy_box_monitor import load_mock_client, load_latest_snapshot, _fetch_offers_live
+from services.buy_box_monitor import (load_mock_client, load_latest_snapshot,
+                                      _fetch_offers_live, ordenar_por_rank)
 from services.price_optimizer import otimizar
 from services.price_model import TARIFAS
 from services.job_status import track
@@ -29,18 +30,6 @@ DATA_DIR = PROJECT_ROOT / "data"
 
 # status que merecem o email
 ACIONAVEIS = {"suggest_change", "sem_custo", "inviavel", "locked"}
-
-
-def _ordenar(df: pl.DataFrame) -> pl.DataFrame:
-    """sort("rank") tolerante a DataFrame vazio.
-
-    _fetch_offers_live devolve pl.DataFrame() sem colunas quando a busca falha, e
-    sort numa coluna inexistente levanta ColumnNotFoundError. Como o fallback
-    live e intermitente, isso derruba o job de vez em quando.
-    """
-    if df.is_empty() or "rank" not in df.columns:
-        return df
-    return df.sort("rank")
 
 
 def _brl(v) -> str:
@@ -73,10 +62,10 @@ def run(modo: str = "sequencial") -> tuple[list[dict], dict]:
     try:
         for sku_cfg in cfg["skus"]:
             pid = sku_cfg["catalog_product_id"]
-            ofertas = _ordenar(snapshot.filter(pl.col("catalog_product_id") == pid))
+            ofertas = ordenar_por_rank(snapshot.filter(pl.col("catalog_product_id") == pid))
             if ofertas.is_empty():
                 log.info("SKU %s fora do snapshot, buscando live...", sku_cfg["sku"])
-                ofertas = _ordenar(_fetch_offers_live(pid, sku_cfg["category_id"], client))
+                ofertas = ordenar_por_rank(_fetch_offers_live(pid, sku_cfg["category_id"], client))
 
             enriquecido = dict(sku_cfg)
             enriquecido.setdefault("ml_seller_id", seller.get("ml_seller_id"))
