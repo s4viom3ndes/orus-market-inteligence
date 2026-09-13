@@ -1,0 +1,141 @@
+# Carteira REAL do VARIEDADESSB, coletada da vitrine publica em 2026-09-12.
+# Os 12 anuncios sao USER_PRODUCT (anuncio proprio): ele esta sozinho em cada
+# pagina, entao nao ha buy box para disputar hoje. catalog_comparavel aponta o
+# produto de catalogo do mesmo dominio com preco mais proximo - e o mercado em
+# que ele cairia se alguem criasse catalogo para o produto dele.
+#
+# custo_compra esta null de proposito: e o unico dado que so ele tem. Enquanto
+# faltar, o optimizer devolve status sem_custo e o email cobra o numero.
+
+seller:
+  name: VARIEDADESSB
+  ml_seller_id: 2692951735
+  contact_email: savioalexandre202@gmail.com
+  has_full: true
+  cidade: Aruja-SP
+  reputacao: 5_green platinum
+defaults:
+  strategy: expected_profit
+  max_change_pct_per_run: 0.15
+  max_price_pct_over_current: 0.2
+skus:
+- sku: MLBU3924117730
+  titulo: Abridor De Vinho Eletrico Usb Recarregavel Saca Rolha
+  catalog_product_id: MLBU3924117730
+  catalog_comparavel: MLB52423397
+  category_id: MLB193633
+  domain_id: MLB-CORKSCREWS_AND_BOTTLE_OPENERS
+  current_price: 78.9
+  preco_tabela: 78.9
+  custo_compra: null
+  vendidos: +10mil
+- sku: MLBU3662769186
+  titulo: Maleta Caixa Porta Relogio Couro 6 Lugares Organizador Preto
+  catalog_product_id: MLBU3662769186
+  catalog_comparavel: MLB46537692
+  category_id: MLB118026
+  domain_id: MLB-WATCH_BOXES_AND_CASES
+  current_price: 78.9
+  preco_tabela: 78.9
+  custo_compra: null
+  vendidos: '+1000'
+- sku: MLBU4716522010
+  titulo: Abridor De Vinho Eletrico Recarregavel Saca Rolha Com Base
+  catalog_product_id: MLBU4716522010
+  catalog_comparavel: MLB52423397
+  category_id: MLB193633
+  domain_id: MLB-CORKSCREWS_AND_BOTTLE_OPENERS
+  current_price: 61.83
+  preco_tabela: 78.9
+  custo_compra: null
+  vendidos: '+50'
+- sku: MLBU4684347523
+  titulo: Kit 10 Cabides De Veludo Adulto Fino Antideslizante Roupas
+  catalog_product_id: MLBU4684347523
+  catalog_comparavel: MLB61653853
+  category_id: MLB186365
+  domain_id: MLB-CLOTHES_HANGERS
+  current_price: 26.95
+  preco_tabela: 69.95
+  custo_compra: null
+  vendidos: '+100'
+- sku: MLBU3900951490
+  titulo: Luminaria Abajur Capivara Led Recarregavel Quarto Infantil
+  catalog_product_id: MLBU3900951490
+  catalog_comparavel: MLB23939071
+  category_id: MLB409094
+  domain_id: MLB-TABLE_AND_DESK_LAMPS
+  current_price: 33.66
+  preco_tabela: 59.9
+  custo_compra: null
+  vendidos: '+1000'
+- sku: MLBU3844574358
+  titulo: Caixa Maleta Estojo Porta Relogio Organizador 3 Lugares
+  catalog_product_id: MLBU3844574358
+  catalog_comparavel: MLB46537692
+  category_id: MLB118026
+  domain_id: MLB-WATCH_BOXES_AND_CASES
+  current_price: 59.9
+  preco_tabela: 59.9
+  custo_compra: null
+  vendidos: '+500'
+- sku: MLBU5088303349
+  titulo: Campainha Sem Fio Bivolt Longo Alcance Residencial 100m
+  catalog_product_id: MLBU5088303349
+  catalog_comparavel: MLB52032438
+  category_id: MLB45425
+  domain_id: MLB-DOORBELLS
+  current_price: 29.0
+  preco_tabela: 55.95
+  custo_compra: null
+  vendidos: '+50'
+- sku: MLBU5088147499
+  titulo: Paquimetro Digital 150mm Fibra Carbono Alta Precisao Estojo
+  catalog_product_id: MLBU5088147499
+  catalog_comparavel: MLB50106745
+  category_id: MLB30163
+  domain_id: MLB-CALIPERS
+  current_price: 29.95
+  preco_tabela: 35.95
+  custo_compra: null
+  vendidos: null
+- sku: MLBU3834291819
+  titulo: Caixa Maleta Estojo Porta Relogio Organizador 12 Lugares
+  catalog_product_id: MLBU3834291819
+  catalog_comparavel: MLB72888947
+  category_id: MLB118026
+  domain_id: MLB-WATCH_BOXES_AND_CASES
+  current_price: 149.9
+  preco_tabela: 149.9
+  custo_compra: null
+  vendidos: '+1000'
+- sku: MLBU3834330241
+  titulo: Caixa Maleta Estojo Porta Relogio Organizador 2 Lugares
+  catalog_product_id: MLBU3834330241
+  catalog_comparavel: MLB67713901
+  category_id: MLB118026
+  domain_id: MLB-WATCH_BOXES_AND_CASES
+  current_price: 38.0
+  preco_tabela: 54.9
+  custo_compra: null
+  vendidos: '+100'
+- sku: MLBU4944186233
+  titulo: 10 Cabides De Plastico Resistente Com Barra Antideslizante
+  catalog_product_id: MLBU4944186233
+  catalog_comparavel: MLB61653853
+  category_id: MLB186365
+  domain_id: MLB-CLOTHES_HANGERS
+  current_price: 29.98
+  preco_tabela: 78.9
+  custo_compra: null
+  vendidos: null
+- sku: MLBU3481695378
+  titulo: Kit 200 Bolinhas Para Piscina Coloridas 5 Cores Nao Amassam
+  catalog_product_id: MLBU3481695378
+  catalog_comparavel: MLB65464527
+  category_id: MLB277954
+  domain_id: MLB-BALL_PIT_BALLS
+  current_price: 199.9
+  preco_tabela: 199.9
+  custo_compra: null
+  vendidos: '+1000'
