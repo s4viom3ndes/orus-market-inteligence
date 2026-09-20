@@ -1,6 +1,13 @@
 # Orus Auth — Scaffold
 
 Estrutura de autenticação e onboarding multi-tenant. **Não ativa ainda** — só estrutura.
+Nenhum módulo fora de `auth/` importa nada daqui, e nenhum teste cobre este diretório.
+
+> **Status em 2026-09-19:** o scaffold continua como estava. O que mudou em volta dele foi que
+> a configuração de SKUs **já saiu do git** — `services/client_config.py` lê de
+> `state/clients/{nome}.yaml` no R2, e os jobs aceitam `--cliente <nome>`. Ou seja, metade do
+> problema de multi-tenancy (config por cliente) já tem solução em produção; o que continua
+> global é o token OAuth e a `WATCHLIST_*`. A Fase 3 abaixo precisa considerar isso.
 
 ## O que resolve (quando ativado)
 
@@ -97,9 +104,12 @@ auth/
 
 **Fase 3 — Migrar dados existentes**
 8. Criar "user zero" (savio) na tabela
-9. Migrar `mock_client.yaml` → `client_skus` desse user
-10. Migrar `tokens.json` → `ml_token_sets` desse user
-11. Deletar arquivos legados
+9. Migrar os YAMLs de `state/clients/` no R2 → `client_skus`, um user por config
+   (`client_config.listar()` enumera). O `mock_client.yaml` versionado vira o user de demo.
+10. Migrar `tokens.json` → `ml_token_sets` desse user — é o que ainda é global de verdade
+11. Decidir o destino de `WATCHLIST_CATEGORIES`/`WATCHLIST_SELLERS`, hoje hardcoded em
+    `etl/src/config.py`: viram coluna por user, ou derivam dos SKUs cadastrados?
+12. Deletar arquivos legados
 
 **Fase 4 — Produção**
 12. Trocar SQLite por Postgres (Supabase/Neon)

@@ -18,7 +18,7 @@ from services.ml_client import MLClient
 from services.buy_box_monitor import (load_mock_client, load_latest_snapshot,
                                       _fetch_offers_live, ordenar_por_rank)
 from services import client_config
-from services.price_optimizer import otimizar
+from services.price_optimizer import otimizar, ACIONAVEIS
 from services.price_model import TARIFAS
 from services.job_status import track
 from services import email_notifier
@@ -29,8 +29,9 @@ log = logging.getLogger("optimize_prices")
 
 DATA_DIR = PROJECT_ROOT / "data"
 
-# status que merecem o email
-ACIONAVEIS = {"suggest_change", "sem_custo", "inviavel", "locked"}
+# ACIONAVEIS vem de services.price_optimizer: quem produz o status e quem diz se
+# ele merece interromper alguem. Antes a lista vivia aqui, solta do produtor, e
+# um status novo nao aparecia no email ate alguem lembrar de editar os dois.
 
 
 def _brl(v) -> str:
@@ -156,11 +157,27 @@ def format_email(linhas: list[dict], seller: dict) -> tuple[str, str, str]:
               f"""{len(hold)} SKU(s) ja estao no preco otimo: """
               f"""{', '.join(r['sku'] for r in hold)}.</p>""")
 
+    # Anuncio proprio nao disputa buy box, entao este motor nao opina sobre ele.
+    # Sem esta secao o SKU sumiria do relatorio e a conta nao fecharia com o
+    # total avaliado - o leitor procuraria um SKU que nunca aparece.
+    sozinhos = [r for r in linhas if r["status"] == "sem_concorrencia"]
+    sem_disputa = ""
+    if sozinhos:
+        sem_disputa = (
+            f"""<h3 style="font-family:sans-serif">Sem concorrencia na pagina</h3>"""
+            f"""<p style="font-family:sans-serif;font-size:14px">"""
+            f"""{len(sozinhos)} SKU(s) sao anuncio proprio e nao disputam buy box: """
+            f"""{', '.join(r['sku'] for r in sozinhos)}.<br>"""
+            f"""<span style="color:#5a6a79">O preco deles nao se decide por posicao, e sim por """
+            f"""quanto a demanda aceita pagar. Este motor nao opina - o piso de margem """
+            f"""(break-even) continua valendo como limite inferior.</span></p>""")
+
     corpo = f"""
     <h2 style="font-family:sans-serif">Orus &mdash; Preco otimo por SKU</h2>
     <p style="font-family:sans-serif;color:#5a6a79">{seller.get('name','')}</p>
     {tabela}
     {travados}
+    {sem_disputa}
     {ok}
     <p style="font-family:sans-serif;font-size:12px;color:#8c9aa8">
       Comissao {100*TARIFAS['comissao_classico']:.0f}% &middot; taxa fixa {_brl(TARIFAS['taxa_fixa'])}

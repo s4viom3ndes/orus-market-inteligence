@@ -22,10 +22,20 @@ WATCHLIST_SELLERS: list[int] = [
     2692951735,
 ]
 
+# A watchlist tem prioridade sobre as folhas descobertas: o que esta aqui e
+# coletado mesmo que o walker de categorias nao chegue la. E o unico jeito de
+# garantir cobertura das categorias onde o cliente realmente vende.
 WATCHLIST_CATEGORIES: list[str] = [
+    # --- categorias da carteira do cliente ativo ---
     "MLB193633",  # Saca Rolhas e Abridores
-    "MLB193807",  # Raladores
+    "MLB118026",  # Caixas e Estojos
     "MLB186365",  # Cabides
+    "MLB409094",  # Luminarias de Sal
+    "MLB45425",   # Campainhas
+    "MLB30163",   # Paquimetros
+    "MLB277954",  # Bolas para Piscinas
+    # --- contexto de mercado ---
+    "MLB193807",  # Raladores
     "MLB1586",    # Luminarias de Mesa
 ]
 

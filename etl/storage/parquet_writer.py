@@ -38,7 +38,37 @@ def write_snapshot(rows: list[dict], dataset: str, base_dir: Path) -> str:
         key = f"{dataset}/date={today}/{filename}"
         uri = upload_file(local_path, key)
         log.info("snapshot enviado: %s (%s linhas)", uri, len(df))
+        _write_latest_pointer(dataset, key, today, len(df), ts)
         return uri
 
     log.info("snapshot local: %s (%s linhas)", local_path, len(df))
     return str(local_path)
+
+
+LATEST_PREFIX = "state/latest"
+
+
+def _write_latest_pointer(dataset: str, key: str, date: str, rows: int, ts: int) -> None:
+    """Grava state/latest/{dataset}.json apontando o snapshot recem-escrito.
+
+    Existe porque descobrir "o mais recente" listando o bucket e fragil: o S3
+    lista em ordem lexicografica de chave e `list_objects_v2` devolve no maximo
+    1000 por pagina. Passando disso, quem nao pagina recebe as chaves MAIS
+    ANTIGAS e, ao pegar o max por last_modified, escolhe o mais novo daquela
+    pagina - ou seja, passa a servir dado velho sem levantar erro nenhum.
+
+    Com o ponteiro a leitura vira O(1) e nao depende de ordem de listagem.
+    Falhar aqui nao pode derrubar o job: o snapshot ja foi escrito, e quem le
+    continua tendo o caminho antigo como fallback.
+    """
+    import json
+    try:
+        from storage.r2 import upload_bytes
+        payload = json.dumps({
+            "dataset": dataset, "key": key, "date": date,
+            "rows": rows, "written_at": ts,
+        }, indent=2).encode("utf-8")
+        upload_bytes(payload, f"{LATEST_PREFIX}/{dataset}.json",
+                     content_type="application/json")
+    except Exception as e:
+        log.warning("ponteiro state/latest/%s.json nao gravado: %s", dataset, e)

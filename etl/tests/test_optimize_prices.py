@@ -80,6 +80,31 @@ def test_email_menciona_quem_ja_esta_otimo():
     assert "otimo" in html
 
 
+def test_email_reporta_sku_sem_concorrencia():
+    """Anuncio proprio nao pode sumir do relatorio: a conta nao fecharia."""
+    linhas = [
+        _r(sku="DISPUTA-1"),
+        _r(sku="PROPRIO-1", status="sem_concorrencia", suggested_price=None,
+           p_win_atual=None, p_win_sugerido=None, margem_sugerida=None,
+           ganho_relativo=None, reason="nenhum concorrente nesta pagina"),
+    ]
+    _, html, _ = format_email(linhas, SELLER)
+    assert "PROPRIO-1" in html
+    assert "nao disputam buy box" in html
+    # e continua mostrando a recomendacao de quem tem disputa
+    assert "DISPUTA-1" in html
+
+
+def test_email_sem_concorrencia_nao_quebra_com_campos_nulos():
+    sozinho = {"sku": "P-1", "status": "sem_concorrencia", "current_price": 78.90,
+               "suggested_price": None, "p_win_atual": None, "p_win_sugerido": None,
+               "margem_sugerida": None, "ganho_relativo": None, "titular_hoje": None,
+               "reason": "nenhum concorrente", "break_even": 38.48}
+    _, html, _ = format_email([sozinho], SELLER)
+    assert "P-1" in html
+    assert "None" not in html
+
+
 def test_email_nao_quebra_com_campos_nulos():
     """Caminho sem_custo/sem_mercado deixa quase tudo None."""
     vazio = {"sku": "X", "status": "sem_mercado", "current_price": 10.0,

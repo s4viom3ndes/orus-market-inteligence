@@ -157,11 +157,24 @@ BRAND_MARK_HTML = f"""
 """
 
 
+# Fora do menu, de proposito:
+#
+#   2_Buy_Box.py  - monta os cartoes a partir do anuncio proprio do cliente, que
+#     nao tem concorrente na pagina. Resultado: 11 de 12 cartoes com "no_data" e
+#     "Winner R$ 0,00". Alem de parecer quebrado, contradiz o diagnostico - a
+#     carteira dele nao disputa buy box. A Vigilancia cobre o mesmo assunto com o
+#     enquadramento certo (catalogo comparavel).
+#
+#   3_Repricer.py - motor de regras (v1), que persegue a buy box baixando preco.
+#     Para esta carteira a recomendacao seria oposta a do motor de margem, e duas
+#     telas discordando sobre o mesmo SKU nao tem como ser explicado ao cliente.
+#
+# Os arquivos continuam no repositorio; so nao entram na navegacao.
 NAV_PAGES = [
     ("app.py", "Visão Geral"),
+    ("pages/6_Preco_Otimo.py", "Preço Ótimo"),
+    ("pages/7_Vigilancia.py", "Vigilância"),
     ("pages/1_Mercado.py", "Mercado"),
-    ("pages/2_Buy_Box.py", "Buy Box"),
-    ("pages/3_Repricer.py", "Repricer"),
     ("pages/4_Trends.py", "Trends"),
     ("pages/5_Historico.py", "Histórico"),
 ]
@@ -175,7 +188,16 @@ def sidebar_header():
 
 def sidebar_nav():
     for path, label in NAV_PAGES:
-        st.sidebar.page_link(path, label=label)
+        try:
+            st.sidebar.page_link(path, label=label)
+        except Exception:
+            # page_link exige contexto multipage. Uma entrada que nao resolve
+            # (pagina removida, ou execucao da pagina isolada) nao pode derrubar
+            # o conteudo da tela - o menu e navegacao, nao o produto.
+            st.sidebar.markdown(
+                f"<div style='padding:4px 0;opacity:.45;font-size:14px'>{label}</div>",
+                unsafe_allow_html=True,
+            )
 
 
 def sidebar_footer(seller_name: str, seller_id: int | str):
@@ -188,9 +210,41 @@ def sidebar_footer(seller_name: str, seller_id: int | str):
     )
 
 
-def setup(page_title: str, seller_name: str = "VariedadesSB (mock)", seller_id: int | str = 2692951735):
+def setup(page_title: str, seller_name: str | None = None, seller_id: int | str | None = None):
+    """Boilerplate de toda pagina.
+
+    Sem seller explicito, resolve o cliente conectado a partir da config. Antes o
+    nome vinha de um valor DEFAULT com o cliente embutido, entao toda tela
+    exibia o mock mesmo quando ja tinha o nome verdadeiro em maos - inclusive a
+    de Buy Box, que carregava o YAML logo abaixo.
+
+    O import e tardio de proposito: theme e apresentacao e nao deve depender de
+    leitura de dado no topo do modulo.
+    """
     st.set_page_config(page_title=f"Orus - {page_title}", page_icon="◾", layout="wide")
     inject_css()
     sidebar_header()
     sidebar_nav()
-    sidebar_footer(seller_name, seller_id)
+
+    demo = False
+    if seller_name is None:
+        try:
+            from lib.r2_reader import (load_client_config, seller_do_config,
+                                       config_e_demonstracao)
+            cfg = load_client_config()
+            demo = config_e_demonstracao(cfg)
+            seller_name, seller_id = seller_do_config(cfg)
+        except Exception:
+            seller_name, seller_id = "—", "—"
+    sidebar_footer(seller_name, seller_id if seller_id is not None else "—")
+
+    # Sem ORUS_CLIENT definido no ambiente, a config cai nos SKUs de demonstracao.
+    # Num deploy novo isso e o padrao, e passaria despercebido: o painel abriria
+    # com produtos ficticios e nada dizendo que sao ficticios.
+    if demo:
+        st.warning(
+            "**Dados de demonstração.** A variável `ORUS_CLIENT` não está definida neste "
+            "ambiente, então o painel está exibindo SKUs de exemplo, e não a carteira real. "
+            "Defina o secret antes de compartilhar o link.",
+            icon=":material/warning:",
+        )

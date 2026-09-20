@@ -1,29 +1,16 @@
-from pathlib import Path
 import streamlit as st
 import polars as pl
-import yaml
-from lib.theme import setup, DIVIDER
+from lib.theme import setup, DIVIDER, ACCENT, ACCENT_TINT_BG, ACCENT_TINT_TEXT
 from lib.components import (
     vip_zone_open, vip_zone_close, sku_card,
-    competitor_row, reversion_callout, locked_callout,
+    competitor_row, reversion_callout, locked_callout, fmt_brl,
 )
-from lib.r2_reader import load_latest_market_snapshot, get_client, R2_BUCKET
+from lib.r2_reader import load_latest_market_snapshot, load_client_config
 
 setup("Buy Box Monitor")
 
-
-@st.cache_data(ttl=300)
-def load_mock_config() -> dict:
-    try:
-        obj = get_client().get_object(Bucket=R2_BUCKET, Key="state/mock_client.yaml")
-        return yaml.safe_load(obj["Body"].read())
-    except Exception:
-        local = Path(__file__).parent.parent.parent / "etl" / "config" / "mock_client.yaml"
-        return yaml.safe_load(local.read_text(encoding="utf-8"))
-
-
-cfg = load_mock_config()
-seller = cfg["seller"]
+cfg = load_client_config()
+seller = cfg.get("seller") or {}
 
 st.markdown(
     f"<h1 style='font-size:34px;margin-bottom:6px'>Buy Box Monitor — {seller['name']}</h1>",
@@ -128,10 +115,26 @@ else:
 
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
-    min_p = float(sku_cfg["min_price"])
-    if winner_price - 0.01 >= min_p:
+    # min_price e campo do repricer v1; a carteira real traz custo de compra no
+    # lugar. Sem piso configurado nao da pra dizer se reverter seria lucrativo -
+    # e afirmar "da pra reverter" sem saber disso seria a pior das duas saidas.
+    piso = sku_cfg.get("min_price")
+    if piso is None:
+        target = fmt_brl(round(winner_price - 0.01, 2))
+        st.markdown(
+            f"<div style='background:{ACCENT_TINT_BG};border-left:4px solid {ACCENT};"
+            f"padding:16px 18px'>"
+            f"<div style='font-weight:800;color:{ACCENT_TINT_TEXT};margin-bottom:4px'>"
+            f"Para assumir a 1ª posição: {target}</div>"
+            f"<div style='font-size:13px;line-height:1.5'>Este SKU ainda não tem custo de "
+            f"compra cadastrado, então não dá para dizer se esse preço deixa margem. "
+            f"Com o custo, o break-even vira o piso e a resposta fica completa.</div></div>",
+            unsafe_allow_html=True,
+        )
+    elif winner_price - 0.01 >= float(piso):
+        min_p = float(piso)
         margin_headroom = round(my_price - min_p, 2)
         target = round(winner_price - 0.01, 2)
         reversion_callout(margin_headroom, target, my_price)
     else:
-        locked_callout(min_p, winner_price)
+        locked_callout(float(piso), winner_price)

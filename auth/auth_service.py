@@ -55,7 +55,10 @@ def verify_session(db: OrmSession, session_id: str) -> User | None:
     sess = db.query(UserSession).filter_by(id=session_id).first()
     if not sess or sess.revoked_at or sess.expires_at < datetime.utcnow():
         return None
-    return sess.user if sess.user and sess.user.is_active else db.query(User).get(sess.user_id)
+    # conta desativada nao autentica. O fallback que existia aqui buscava o User
+    # de novo e o devolvia mesmo com is_active=False, o que anulava a checagem:
+    # desativar alguem nao o deslogava.
+    return sess.user if (sess.user and sess.user.is_active) else None
 
 
 def logout(db: OrmSession, session_id: str) -> None:

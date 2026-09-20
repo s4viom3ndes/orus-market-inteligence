@@ -50,3 +50,41 @@ def download_bytes(key: str) -> Optional[bytes]:
         return obj["Body"].read()
     except get_client().exceptions.NoSuchKey:
         return None
+
+
+def list_keys(prefix: str) -> list[dict]:
+    """Todas as chaves sob o prefixo, paginando.
+
+    `list_objects_v2` devolve no maximo 1000 por chamada. Quem nao pagina nao
+    recebe um erro - recebe um recorte silencioso, e em ordem lexicografica,
+    entao o recorte fica justamente com as chaves mais ANTIGAS.
+    """
+    paginator = get_client().get_paginator("list_objects_v2")
+    saida: list[dict] = []
+    for page in paginator.paginate(Bucket=R2_BUCKET, Prefix=prefix):
+        saida.extend(
+            {"key": o["Key"], "size": o["Size"], "last_modified": o["LastModified"]}
+            for o in page.get("Contents", [])
+        )
+    return saida
+
+
+def latest_key(dataset: str) -> Optional[str]:
+    """Chave do snapshot mais recente de um dataset.
+
+    Le o ponteiro `state/latest/{dataset}.json` que `parquet_writer` grava a cada
+    escrita. Se o ponteiro nao existir (datasets escritos antes dele), cai para a
+    varredura paginada - correta, so mais cara.
+    """
+    import json
+    raw = download_bytes(f"state/latest/{dataset}.json")
+    if raw:
+        try:
+            return json.loads(raw)["key"]
+        except (ValueError, KeyError) as e:
+            log.warning("ponteiro de %s ilegivel (%s), varrendo o prefixo", dataset, e)
+
+    objs = list_keys(f"{dataset}/")
+    if not objs:
+        return None
+    return max(objs, key=lambda o: o["last_modified"])["key"]

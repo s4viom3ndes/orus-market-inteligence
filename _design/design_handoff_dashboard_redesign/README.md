@@ -1,5 +1,26 @@
 # Handoff: Orus Dashboard Redesign (Streamlit)
 
+> **Status as of 2026-09-19 — partially implemented; this spec is kept as the design reference, not as a to-do list.**
+>
+> What landed: `dashboard/lib/theme.py` carries the tokens, the Archivo import, the CSS injection and
+> the custom sidebar nav (Streamlit's native nav is disabled in `.streamlit/config.toml`).
+> `dashboard/lib/components.py` emits the HTML for the patterns `st.dataframe` can't render — bar
+> lists, SKU cards, comparison rows, callouts — exactly as section "Streamlit implementation notes"
+> item 3 prescribes.
+>
+> What drifted from this document:
+> - **The dashboard now has 6 screens, not 4.** Trends moved to `pages/4_Trends.py` (this doc calls it
+>   `pages/3_Trends.py`), `pages/3_Repricer.py` took that slot, and `pages/5_Historico.py` was added
+>   afterwards. Neither Repricer nor Histórico has a design spec here — both were built following the
+>   established patterns rather than a new mock.
+> - **The "Como reverter" target price** described under Interactions still mirrors
+>   `services/buy_box_monitor.py`, as instructed. Note that a second engine now exists
+>   (`services/price_optimizer.py`), which recommends a *different* price on purpose — it maximizes
+>   expected profit rather than position. If this callout is ever reworked, decide explicitly which
+>   engine it speaks for; showing both without labelling them would read as a contradiction to the client.
+>
+> Remaining visual polish is tracked in `ROADMAP.md` under "Refinamento visual do dashboard".
+
 ## Overview
 Redesign of the existing Orus Streamlit dashboard (`dashboard/app.py` + `dashboard/pages/*.py`) in the Modernist visual language: flat, architectural, Archivo type, a single red accent, zero border-radius, strong 2px rules. Goal: make the same data (market snapshots, Buy Box comparison, trends) easier to read for managerial decisions.
 

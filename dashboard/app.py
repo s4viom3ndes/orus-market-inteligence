@@ -13,11 +13,11 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-with st.spinner("Carregando snapshot mais recente..."):
+with st.spinner("Carregando dados mais recentes..."):
     df = load_latest_market_snapshot()
 
 if df.is_empty():
-    st.warning("Nenhum snapshot no R2 ainda.")
+    st.info("Os dados de mercado ainda não foram coletados.")
     st.stop()
 
 c1, c2, c3, c4 = st.columns(4)
@@ -47,12 +47,12 @@ for r in by_cat.head(15).rows(named=True):
 
 if by_cat.height > 15:
     st.markdown(
-        f'<div style="padding:10px 0;font-size:12.5px;opacity:0.4">+ {by_cat.height - 15} categorias no snapshot completo</div>',
+        f'<div style="padding:10px 0;font-size:12.5px;opacity:0.4">+ {by_cat.height - 15} categorias acompanhadas</div>',
         unsafe_allow_html=True,
     )
 
 st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown("<h3 style='margin:24px 0 14px'>Buy Box winners (esse snapshot)</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='margin:24px 0 14px'>Quem está com o destaque hoje</h3>", unsafe_allow_html=True)
 
 winners = df.filter(pl.col("is_buy_box_winner")).sort("visits_30d", descending=True, nulls_last=True).head(20)
 
@@ -97,4 +97,4 @@ with col_b:
             use_container_width=True, hide_index=True,
         )
     else:
-        st.info("Nenhum snapshot de trends.")
+        st.info("Ainda sem dados de tendências.")

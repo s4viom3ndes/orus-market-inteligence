@@ -20,16 +20,24 @@ st.markdown(
 )
 st.markdown(
     "<div style='font-size:15px;opacity:0.6;margin-bottom:24px'>"
-    "Cada snapshot diário registra posição, preço e gap do cliente contra o winner "
-    "de cada SKU acompanhado.</div>",
+    "Cada medição diária registra, para cada produto acompanhado, a sua posição, o seu "
+    "preço e a distância até quem está com o destaque.</div>",
     unsafe_allow_html=True,
 )
 
 df = load_buy_box_history()
+
+# O historico acumulou duas origens: linhas reais do vendedor e linhas de SKUs de
+# demonstracao usados antes da carteira real entrar. Misturar as duas numa tela
+# de cliente mostraria codigos de produto que nao sao dele - so a origem real
+# entra aqui.
+if not df.is_empty() and "source" in df.columns:
+    df = df.filter(pl.col("source") == "real")
+
 if df.is_empty():
     st.info(
-        "Ainda sem histórico. O job `track_client_history` roda diariamente às 04:15 UTC "
-        "e alimenta esse painel a cada snapshot."
+        "O histórico começa a aparecer conforme as medições diárias se acumulam. "
+        "Cada dia acrescenta um ponto à série de cada produto."
     )
     st.stop()
 
@@ -111,7 +119,7 @@ chart_long["serie"] = chart_long["serie"].map({"current_price": "Meu preço", "w
 
 st.markdown("<h3 style='margin:0 0 12px;font-size:18px'>Preço vs Winner</h3>", unsafe_allow_html=True)
 if len(chart_df) < 2:
-    st.info("Pelo menos 2 dias de coleta são necessários pra plotar tendência. Aguarde próximo snapshot.")
+    st.info("A tendência aparece a partir do segundo dia de medição deste produto.")
 else:
     color_scale = alt.Scale(domain=["Meu preço", "Winner"], range=[ACCENT, TEXT])
     chart = (
@@ -135,7 +143,7 @@ st.markdown("<h3 style='margin:0 0 12px;font-size:18px'>Posição no ranking</h3
 
 pos_df = sku_df.select(["date", "our_position", "n_competitors"]).to_pandas()
 if len(pos_df) < 2:
-    st.info("Aguarde mais snapshots pra ver evolução.")
+    st.info("A evolução aparece conforme mais dias forem medidos.")
 else:
     pos_chart = (
         alt.Chart(pos_df)

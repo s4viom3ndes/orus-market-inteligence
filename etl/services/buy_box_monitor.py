@@ -31,16 +31,13 @@ def load_mock_client() -> dict:
 def load_latest_snapshot() -> pl.DataFrame:
     """Retorna o parquet mais recente de market_offers (do R2 ou local)."""
     if USE_REMOTE_STORAGE:
-        from storage.r2 import get_client
-        r = get_client().list_objects_v2(Bucket=R2_BUCKET, Prefix="market_offers/")
-        objs = sorted(r.get("Contents", []), key=lambda x: x["LastModified"], reverse=True)
-        if not objs:
+        from storage.r2 import latest_key, download_bytes
+        key = latest_key("market_offers")
+        if not key:
             raise RuntimeError("nenhum snapshot no R2")
-        key = objs[0]["Key"]
         log.info("lendo snapshot: r2://%s/%s", R2_BUCKET, key)
-        obj = get_client().get_object(Bucket=R2_BUCKET, Key=key)
         import io
-        return pl.read_parquet(io.BytesIO(obj["Body"].read()))
+        return pl.read_parquet(io.BytesIO(download_bytes(key)))
 
     import glob
     files = sorted(glob.glob(str(ETL_ROOT.parent / "data" / "market_offers" / "**" / "*.parquet"), recursive=True))

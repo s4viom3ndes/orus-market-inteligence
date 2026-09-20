@@ -1,30 +1,10 @@
-from pathlib import Path
 import streamlit as st
 import polars as pl
-import yaml
 from lib.theme import setup, ACCENT, ACCENT_TINT_BG, ACCENT_TINT_TEXT
-from lib.r2_reader import load_latest_market_snapshot, get_client, R2_BUCKET, list_snapshots, read_parquet
+from lib.r2_reader import (load_latest_market_snapshot, load_client_config,
+                           load_latest_suggestions)
 
-setup("Repricer")
-
-
-@st.cache_data(ttl=300)
-def load_mock_config() -> dict:
-    try:
-        obj = get_client().get_object(Bucket=R2_BUCKET, Key="state/mock_client.yaml")
-        return yaml.safe_load(obj["Body"].read())
-    except Exception:
-        local = Path(__file__).parent.parent.parent / "etl" / "config" / "mock_client.yaml"
-        return yaml.safe_load(local.read_text(encoding="utf-8"))
-
-
-@st.cache_data(ttl=300)
-def load_latest_suggestions() -> pl.DataFrame:
-    snaps = list_snapshots("reprice_suggestions/")
-    if not snaps:
-        return pl.DataFrame()
-    latest = max(snaps, key=lambda x: x["last_modified"])
-    return read_parquet(latest["key"])
+setup("Simulador")
 
 
 def project_pos(price: float, prices_sorted: list[float]) -> int:
@@ -37,7 +17,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-cfg = load_mock_config()
+cfg = load_client_config()
 snap = load_latest_market_snapshot()
 suggestions = load_latest_suggestions()
 
@@ -80,8 +60,21 @@ c4.metric("Minha posição hoje", f"{project_pos(my_current, prices) + 1}º")
 
 st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
-min_slider = float(sku_cfg["min_price"])
-max_slider = float(sku_cfg.get("max_price") or my_current * 1.5)
+# min_price/max_price sao campos do repricer v1 e nem toda config de cliente os
+# tem - a carteira real, por exemplo, traz custo e preco de tabela em vez deles.
+# Sem piso configurado, o slider abre a partir de metade do preco vigente: e
+# faixa de simulacao, nao recomendacao, entao nao precisa de piso economico.
+piso_cfg = sku_cfg.get("min_price")
+min_slider = float(piso_cfg) if piso_cfg is not None else round(my_current * 0.5, 2)
+max_slider = float(sku_cfg.get("max_price") or sku_cfg.get("preco_tabela") or my_current * 1.5)
+if max_slider <= min_slider:
+    max_slider = min_slider + max(1.0, min_slider * 0.5)
+if piso_cfg is None:
+    st.caption(
+        "Este SKU não tem preço mínimo configurado, então a faixa abaixo é apenas de "
+        "simulação. O piso que vale economicamente é o break-even, que depende do "
+        "custo de compra."
+    )
 test_price = st.slider(
     "Preço simulado", min_value=min_slider, max_value=max_slider,
     value=my_current, step=0.10, format="R$ %.2f",

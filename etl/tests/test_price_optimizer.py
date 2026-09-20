@@ -43,6 +43,51 @@ def test_sem_mercado_nao_sugere():
     assert r["suggested_price"] is None
 
 
+def test_unica_oferta_e_a_nossa_nao_vira_recomendacao():
+    """Anuncio proprio: a unica oferta da pagina e do cliente.
+
+    Sem rival o denominador do logit zera, P(buy box) = 1 em qualquer preco, e o
+    argmax escolhe ponto arbitrario da grade. Ja foi visto recomendar BAIXAR
+    preco para margem pior com ganho_relativo 1,0. Tem que recusar, nao chutar.
+    """
+    so_a_nossa = [{"price": 78.90, "rank": 0, "seller_id": 999,
+                   "shipping_logistic_type": "fulfillment",
+                   "listing_type_id": "gold_special", "official_store_id": None}]
+    r = otimizar(_sku(current_price=78.90), so_a_nossa, defaults=DEFAULTS)
+
+    assert r["status"] == "sem_concorrencia"
+    assert r["suggested_price"] is None
+    assert r["n_competitors"] == 0
+    assert "elasticidade" in r["reason"]
+
+
+def test_sem_concorrencia_nao_depende_de_sermos_o_rank_zero():
+    """Mesmo fora da primeira posicao, se todas as ofertas sao nossas nao ha disputa."""
+    todas_nossas = [
+        {"price": 60.0, "rank": 0, "seller_id": 999, "shipping_logistic_type": "fulfillment",
+         "listing_type_id": "gold_special", "official_store_id": None},
+        {"price": 72.0, "rank": 1, "seller_id": 999, "shipping_logistic_type": "fulfillment",
+         "listing_type_id": "gold_special", "official_store_id": None},
+    ]
+    r = otimizar(_sku(), todas_nossas, defaults=DEFAULTS)
+    assert r["status"] == "sem_concorrencia"
+    assert r["n_competitors"] == 0
+
+
+def test_um_rival_ja_e_suficiente_para_decidir():
+    """O guard corta em zero rival, nao em 'poucos' - com 1 rival o modelo vale."""
+    um_rival = [
+        {"price": 44.95, "rank": 0, "seller_id": 111, "shipping_logistic_type": "fulfillment",
+         "listing_type_id": "gold_special", "official_store_id": None},
+        {"price": 50.00, "rank": 1, "seller_id": 999, "shipping_logistic_type": "fulfillment",
+         "listing_type_id": "gold_special", "official_store_id": None},
+    ]
+    r = otimizar(_sku(), um_rival, defaults=DEFAULTS)
+    assert r["status"] in ("hold", "suggest_change")
+    assert r["n_competitors"] == 1
+    assert 0.0 < r["p_win_atual"] < 1.0
+
+
 def test_break_even_e_calculado_e_vira_piso():
     r = otimizar(_sku(custo_compra=20.0), MERCADO, defaults=DEFAULTS)
     assert r["break_even"] == pytest.approx(29.49, abs=0.05)
@@ -123,3 +168,26 @@ def test_campos_do_relatorio_estao_presentes():
                   "p_win_atual", "p_win_sugerido", "margem_sugerida",
                   "lucro_esperado_sugerido", "titular_hoje", "status", "reason"):
         assert campo in r, campo
+
+
+def test_taxonomia_cobre_todo_status_que_o_otimizador_devolve():
+    """Status novo sem entrada em STATUS sumiria do email sem ninguem notar."""
+    import re, pathlib
+    from services.price_optimizer import STATUS
+
+    fonte = pathlib.Path(__file__).parent.parent / "services" / "price_optimizer.py"
+    texto = fonte.read_text(encoding="utf-8")
+    # captura r["status"] = "algo"  e  "status": "algo"
+    encontrados = set(re.findall(r'r\["status"\]\s*=\s*"([a-z_]+)"', texto))
+    encontrados |= set(re.findall(r'"status":\s*"([a-z_]+)"', texto))
+
+    faltando = encontrados - set(STATUS)
+    assert not faltando, f"status sem entrada em STATUS: {sorted(faltando)}"
+
+
+def test_acionavel_deriva_de_status_e_nao_e_lista_solta():
+    from services.price_optimizer import STATUS, ACIONAVEIS
+    assert ACIONAVEIS == frozenset(k for k, v in STATUS.items() if v["acionavel"])
+    # sem_concorrencia e estrutural: repetir todo dia treina o leitor a ignorar
+    assert "sem_concorrencia" not in ACIONAVEIS
+    assert "suggest_change" in ACIONAVEIS

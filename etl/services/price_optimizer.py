@@ -31,6 +31,28 @@ PASSO_GRADE = 0.25     # centavos de granularidade na busca
 GAMMA = 0.97           # desconto diario do MDP
 MAX_ITER_MDP = 3000
 
+# Taxonomia dos status, declarada por quem os produz.
+#
+# `acionavel` responde "isto merece interromper alguem hoje?". E o que decide se
+# o email diario sai. Nao e o mesmo que "importante": `sem_concorrencia` e uma
+# informacao estrutural e permanente sobre o SKU, entao repetir todo dia so
+# treina o leitor a ignorar o relatorio.
+#
+# Ter isso aqui, e nao no job, evita o email e a tela discordarem sobre o que
+# exige atencao - que seria uma divergencia invisivel ate o cliente perguntar.
+STATUS = {
+    "suggest_change":   {"acionavel": True,  "label": "Ajustar preco"},
+    "hold":             {"acionavel": False, "label": "Ja esta no otimo"},
+    "locked":           {"acionavel": True,  "label": "Travado pelo guard rail"},
+    "inviavel":         {"acionavel": True,  "label": "Nao fecha em nenhum preco"},
+    "sem_custo":        {"acionavel": True,  "label": "Falta custo de compra"},
+    "sem_concorrencia": {"acionavel": False, "label": "Sem disputa na pagina"},
+    "sem_mercado":      {"acionavel": False, "label": "Sem ofertas coletadas"},
+    "no_data":          {"acionavel": False, "label": "Sem dado"},
+}
+
+ACIONAVEIS = frozenset(k for k, v in STATUS.items() if v["acionavel"])
+
 
 def _grade(minimo: float, maximo: float, passo: float = PASSO_GRADE) -> list[float]:
     if maximo < minimo:
@@ -150,6 +172,21 @@ def otimizar(sku_cfg: dict, ofertas: list[dict], *, tem_full: bool = False,
     # entre estar titular e nao estar.
     rivais = [o for o in ofertas if meu_id is None or o.get("seller_id") != meu_id]
     r["n_competitors"] = len(rivais)
+
+    # Sem rival, o modelo nao tem o que dizer. soma_rivais devolve 0, entao
+    # P = exp(V)/(exp(V)+0) = 1 em QUALQUER preco: a probabilidade some do
+    # produto e o argmax passa a escolher ponto arbitrario da grade - ja foi
+    # visto recomendar baixar preco para margem pior, com ganho_relativo 1,0.
+    # Anuncio proprio cai sempre aqui: nao ha buy box a disputar na pagina.
+    # Quem decide preco neste caso e elasticidade de demanda, que este modelo
+    # nao estima.
+    if not rivais:
+        r["status"] = "sem_concorrencia"
+        r["reason"] = ("nenhum concorrente nesta pagina - sem disputa, a chance de buy box "
+                       "e 100% a qualquer preco e o modelo nao distingue um preco do outro. "
+                       "Definir preco aqui depende de elasticidade de demanda, nao de buy box")
+        return r
+
     soma = soma_rivais(rivais, mediana, coef=coef)
 
     def pw(preco, como_titular):

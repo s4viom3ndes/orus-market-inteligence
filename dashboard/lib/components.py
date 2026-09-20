@@ -41,6 +41,74 @@ def fmt_int(v) -> str:
         return str(v)
 
 
+def fmt_brl(v) -> str:
+    """R$ 1.234,56. Devolve travessao quando nao ha valor, nunca 'None'."""
+    if v is None:
+        return "—"
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return str(v)
+    return "R$ " + f"{v:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+
+
+def fmt_pct(v, casas: int = 1) -> str:
+    """Recebe fracao (0,132) e devolve 13,2%."""
+    if v is None:
+        return "—"
+    try:
+        return f"{100*float(v):.{casas}f}%".replace(".", ",")
+    except (TypeError, ValueError):
+        return str(v)
+
+
+def page_header(title: str, subtitle: str = ""):
+    """Cabecalho padrao. Antes cada pagina reescrevia esse HTML inline."""
+    st.markdown(
+        f"<h1 style='font-size:34px;margin-bottom:6px'>{escape(title)}</h1>",
+        unsafe_allow_html=True,
+    )
+    if subtitle:
+        st.markdown(
+            f"<div style='font-size:15px;opacity:0.6;margin-bottom:24px'>{escape(subtitle)}</div>",
+            unsafe_allow_html=True,
+        )
+
+
+def kpi_row(items: list[tuple[str, str, str]]):
+    """Linha de KPIs: (rotulo, valor, complemento). Complemento pode ser vazio."""
+    if not items:
+        return
+    cols = st.columns(len(items))
+    for col, (label, value, sub) in zip(cols, items):
+        col.markdown(
+            f"<div style='font-size:11px;text-transform:uppercase;letter-spacing:.06em;"
+            f"opacity:.55;margin-bottom:2px'>{escape(label)}</div>"
+            f"<div style='font-family:Archivo,sans-serif;font-weight:800;font-size:32px;"
+            f"line-height:1.1'>{escape(str(value))}</div>"
+            + (f"<div style='font-size:12px;opacity:.55;margin-top:2px'>{escape(sub)}</div>" if sub else ""),
+            unsafe_allow_html=True,
+        )
+
+
+def empty_state(title: str, body: str, detalhe: str = ""):
+    """Estado vazio que explica a causa em vez de mostrar tabela em branco.
+
+    Nao cita nome de job nem comando: o leitor e o cliente, nao o operador.
+    """
+    st.markdown(
+        f"<div style='background:{ACCENT_TINT_BG};border-left:4px solid {ACCENT};"
+        f"padding:20px 22px;margin:8px 0 20px'>"
+        f"<div style='font-family:Archivo,sans-serif;font-weight:800;font-size:18px;"
+        f"color:{ACCENT_TINT_TEXT};margin-bottom:6px'>{escape(title)}</div>"
+        f"<div style='font-size:14px;line-height:1.55'>{escape(body)}</div>"
+        + (f"<div style='font-size:13px;opacity:.7;margin-top:8px'>{escape(detalhe)}</div>"
+           if detalhe else "")
+        + "</div>",
+        unsafe_allow_html=True,
+    )
+
+
 def tag(label: str, style: str = "neutral", size_px: int = 10) -> str:
     css = TAG_STYLES.get(style, TAG_STYLES["neutral"])
     return (
