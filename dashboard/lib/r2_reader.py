@@ -128,6 +128,27 @@ def load_market_history(dias: int = 7, produtos: tuple[str, ...] = ()) -> pl.Dat
     return pl.concat(partes, how="diagonal_relaxed") if partes else pl.DataFrame()
 
 
+@st.cache_data(ttl=600)
+def load_trends_history(dias: int = 8) -> pl.DataFrame:
+    """Ultimas N medicoes de trends, com a data de cada uma.
+
+    A API do ML devolve so o termo e a posicao - nao ha visitas nem preco por
+    termo. O que se consegue medir e o MOVIMENTO: acompanhando dia a dia, da
+    para ver o que subiu, o que caiu e o que acabou de entrar.
+    """
+    snaps = list_snapshots("trends/")
+    if not snaps:
+        return pl.DataFrame()
+    partes = []
+    for sn in sorted(snaps, key=lambda x: x["last_modified"])[-dias:]:
+        df = read_parquet(sn["key"])
+        if df.is_empty():
+            continue
+        dia = sn["key"].split("date=")[1][:10] if "date=" in sn["key"] else ""
+        partes.append(df.with_columns(pl.lit(dia).alias("dia")))
+    return pl.concat(partes, how="diagonal_relaxed") if partes else pl.DataFrame()
+
+
 def sem_precos_absurdos(df: pl.DataFrame, fator: float = 20.0) -> pl.DataFrame:
     """Descarta ofertas com preco acima de `fator` x a mediana do proprio produto.
 
@@ -170,6 +191,31 @@ except (FileNotFoundError, AttributeError):
 CLIENT_SLUG = CLIENT_SLUG or os.getenv("ORUS_CLIENT", "")
 
 
+@st.cache_data(ttl=600)
+def _unico_cliente_no_r2() -> str:
+    """Slug do cliente quando existe exatamente um configurado no R2.
+
+    Evita depender de uma variavel de ambiente para o painel saber quem ele
+    serve: num deploy novo essa variavel nao existe, e o fallback silencioso
+    servia SKUs ficticios. O nome do cliente continua fora do repositorio -
+    ele vem do bucket, que e privado.
+
+    Com mais de um cliente configurado a escolha deixa de ser obvia, e aí a
+    variavel ORUS_CLIENT volta a ser necessaria.
+    """
+    try:
+        paginator = get_client().get_paginator("list_objects_v2")
+        slugs = []
+        for page in paginator.paginate(Bucket=R2_BUCKET, Prefix="state/clients/"):
+            for o in page.get("Contents", []):
+                nome = o["Key"].rsplit("/", 1)[-1]
+                if nome.endswith(".yaml"):
+                    slugs.append(nome[:-5])
+        return slugs[0] if len(slugs) == 1 else ""
+    except Exception:
+        return ""
+
+
 @st.cache_data(ttl=300)
 def load_client_config() -> dict:
     """Config do cliente: state/clients/{slug}.yaml, caindo pro mock.
@@ -183,10 +229,11 @@ def load_client_config() -> dict:
     servia SKUs ficticios sem nada indicando isso.
     """
     import yaml
-    if CLIENT_SLUG:
+    slug = CLIENT_SLUG or _unico_cliente_no_r2()
+    if slug:
         try:
             obj = get_client().get_object(Bucket=R2_BUCKET,
-                                          Key=f"state/clients/{CLIENT_SLUG}.yaml")
+                                          Key=f"state/clients/{slug}.yaml")
             cfg = yaml.safe_load(obj["Body"].read()) or {}
             cfg["_origem"] = "cliente"
             return cfg

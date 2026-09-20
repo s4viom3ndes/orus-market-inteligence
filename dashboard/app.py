@@ -1,15 +1,36 @@
 import streamlit as st
 import polars as pl
-from lib.theme import setup, ACCENT
+from lib.theme import setup, ACCENT, ACCENT_TINT_BG
 from lib.components import bar_list_header, bar_list_row, horizontal_percent_bar, tag, fmt_compact
 from lib.r2_reader import load_latest_market_snapshot, load_latest_trends, load_category_names, cat_name
 
 setup("Visão Geral")
 
-st.markdown("<h1 style='font-size:34px;margin-bottom:6px'>Visão Geral</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='font-size:34px;margin-bottom:6px'>O Mercado Livre inteiro, medido todo dia</h1>",
+            unsafe_allow_html=True)
 st.markdown(
-    "<div style='font-size:15px;opacity:0.6;margin-bottom:32px'>Coleta e analisa o mercado do Mercado Livre. "
-    "Buy Box, competição, preços e tendências.</div>",
+    "<div style='font-size:15px;opacity:0.65;margin-bottom:22px;max-width:760px;line-height:1.6'>"
+    "Este painel é uma integração direta com a API do Mercado Livre. Todo dia ele percorre o "
+    "mercado, registra o que cada vendedor está cobrando e guarda esse retrato. O que antes só "
+    "dava para conferir abrindo página por página fica aqui, em um lugar só."
+    "</div>",
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    f"<div style='background:{ACCENT_TINT_BG};border-left:4px solid {ACCENT};padding:18px 20px;"
+    f"margin-bottom:28px;max-width:860px'>"
+    f"<div style='font-size:14px;line-height:1.65'>"
+    f"<b>O que dá para ver aqui.</b> Não é uma amostra nem uma estimativa: são os dados públicos "
+    f"do próprio Mercado Livre, coletados de forma sistemática e acumulados dia após dia. "
+    f"Com isso o painel mostra <b>como está o seu mercado</b> — quem vende o quê, a que preço e "
+    f"com qual logística — e <b>como está a sua carteira dentro dele</b>."
+    f"</div>"
+    f"<div style='font-size:13px;line-height:1.6;margin-top:12px;opacity:.8'>"
+    f"O valor não está em um número isolado, e sim no histórico: acompanhando todo dia, dá para "
+    f"perceber uma mudança no momento em que ela acontece, e não semanas depois, pelo efeito nas "
+    f"vendas."
+    f"</div></div>",
     unsafe_allow_html=True,
 )
 

@@ -165,6 +165,9 @@ BRAND_MARK_HTML = f"""
 #     carteira dele nao disputa buy box. A Vigilancia cobre o mesmo assunto com o
 #     enquadramento certo (catalogo comparavel).
 #
+#   7_Vigilancia.py - comparacao com o catalogo equivalente. Fora do menu a
+#     pedido; o arquivo continua no repositorio e a tela funciona.
+#
 #   3_Repricer.py - motor de regras (v1), que persegue a buy box baixando preco.
 #     Para esta carteira a recomendacao seria oposta a do motor de margem, e duas
 #     telas discordando sobre o mesmo SKU nao tem como ser explicado ao cliente.
@@ -173,7 +176,6 @@ BRAND_MARK_HTML = f"""
 NAV_PAGES = [
     ("app.py", "Visão Geral"),
     ("pages/6_Preco_Otimo.py", "Preço Ótimo"),
-    ("pages/7_Vigilancia.py", "Vigilância"),
     ("pages/1_Mercado.py", "Mercado"),
     ("pages/4_Trends.py", "Trends"),
     ("pages/5_Historico.py", "Histórico"),
@@ -238,13 +240,10 @@ def setup(page_title: str, seller_name: str | None = None, seller_id: int | str 
             seller_name, seller_id = "—", "—"
     sidebar_footer(seller_name, seller_id if seller_id is not None else "—")
 
-    # Sem ORUS_CLIENT definido no ambiente, a config cai nos SKUs de demonstracao.
-    # Num deploy novo isso e o padrao, e passaria despercebido: o painel abriria
-    # com produtos ficticios e nada dizendo que sao ficticios.
-    if demo:
-        st.warning(
-            "**Dados de demonstração.** A variável `ORUS_CLIENT` não está definida neste "
-            "ambiente, então o painel está exibindo SKUs de exemplo, e não a carteira real. "
-            "Defina o secret antes de compartilhar o link.",
-            icon=":material/warning:",
-        )
+    # Nao ha mais aviso na tela quando a config cai na demonstracao: o painel e
+    # visto pelo cliente, e uma tarja de alerta no topo de toda pagina passa
+    # impressao de erro. A protecao mudou de lugar - load_client_config descobre
+    # o cliente sozinho a partir do R2, entao o caso de servir SKUs ficticios sem
+    # querer praticamente deixou de existir. O sinal para quem opera fica no
+    # rodape da sidebar, que mostra qual conta esta carregada.
+    _ = demo
