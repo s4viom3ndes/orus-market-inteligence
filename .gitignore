@@ -23,3 +23,7 @@ etl/config/client_*.yaml
 etl/scripts/mercado_cliente.py
 etl/scripts/simular_cliente.py
 etl/scripts/simular_defesa.py
+
+# Analise que carrega dado comercial do cliente (carteira, precos, comparaveis).
+# O repositorio e publico; a analise de mercado agregada fica no 01.
+notebooks/02_carteira_cliente.ipynb

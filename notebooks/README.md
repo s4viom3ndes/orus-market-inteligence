@@ -7,7 +7,8 @@ pipeline de producao — sao o lugar de formular e testar hipoteses antes de vir
 
 | Arquivo | O que responde |
 |---|---|
-| `01_buy_box_e_margem.ipynb` | O que determina ganhar a buy box, quanto cada atributo vale em preço, quanto dura a posse, e se a carteira do cliente disputa buy box |
+| `01_buy_box_e_margem.ipynb` | O que determina ganhar a buy box, quanto cada atributo vale em preço e quanto dura a posse. Só mercado agregado — vai para o repositório |
+| `02_carteira_cliente.ipynb` | A carteira de um cliente contra o catálogo equivalente. **Gitignored**, porque carrega carteira, preços e mapeamento de concorrentes |
 | `mdp_prototype.py` | Protótipo do repricer como MDP sobre titularidade: vale mais conquistar a buy box ou colher margem? Virou `services/price_optimizer.otimizar(modo="sequencial")` |
 
 ## O que daqui vira produção
@@ -18,6 +19,18 @@ constante:
 - A **seção 6** do `01` estima o logit condicional dinâmico (grupo = produto × dia, com o termo
   `titular`) que alimenta `price_model.COEFICIENTES`.
 - `mdp_prototype.py` desenhou a política que virou o modo sequencial do otimizador.
+
+### Por que são dois
+
+O repositório é público. A análise de mercado usa só dado agregado e pode ser versionada
+com os outputs, que é o que a convenção abaixo pede. A análise de uma carteira específica
+expõe preço praticado, volume e o mapeamento de catálogos concorrentes — informação
+comercial do cliente e resultado do nosso trabalho. Por isso o `02` está no `.gitignore`.
+
+O `02` roda sozinho: repete as células de carga que precisa e declara os coeficientes do
+modelo explicitamente, em vez de depender de o `01` ter sido executado antes na mesma
+sessão. Quando os betas forem reestimados, trocar nos dois lugares — e em
+`services/price_model.py`.
 
 > **Nota de 2026-09-19.** Até esta revisão, a estimação dinâmica **não estava versionada em lugar
 > nenhum**: só o resultado final aparecia, hardcoded em `price_model.py` e no `mdp_prototype.py`.
